@@ -117,7 +117,9 @@
   .climbrow svg{flex:0 0 auto}
   @media (max-width:640px){
     .hud .v{font-size:14px}.hud .cell{padding:6px 4px}
-    .climbspanel{top:auto;bottom:200px;right:10px}
+    .climbspanel{top:auto;bottom:200px;right:10px;max-height:42vh}
+    .peakcard{top:auto;bottom:150px;left:10px;right:10px;width:auto;max-height:40vh}
+    .teamspanel{top:106px;left:10px;right:10px;width:auto;max-height:60vh}
   }
   /* vista general (etapa 0) */
   .legend{position:absolute;left:14px;bottom:14px;z-index:6;background:var(--panel);backdrop-filter:blur(10px);
@@ -151,9 +153,9 @@
   .srow.shdr .sh3{font:600 8px/1 Inter;color:var(--muted);text-transform:uppercase}
   .srow.shdr{border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:5px;margin-bottom:2px}
   .snote{margin-top:6px;font:500 9.5px/1.4 Inter;color:var(--muted)}
-  .peakcard{position:absolute;left:50%;transform:translateX(-50%);bottom:150px;z-index:9;background:var(--panel);
+  .peakcard{position:absolute;right:14px;z-index:9;background:var(--panel);
     backdrop-filter:blur(12px);border:1px solid var(--panel-line);border-radius:14px;padding:14px 16px;display:none;
-    width:min(340px,92vw)}
+    width:min(340px,82vw);overflow-y:auto}
   .peakcard.show{display:block}
   .peakcard .x{position:absolute;top:8px;right:10px;background:none;border:0;color:var(--muted);font:700 16px/1 Inter;cursor:pointer}
   .peakcard h3{margin:0 0 2px;font:600 19px/1.15 Oswald;display:flex;align-items:center;gap:8px}
@@ -167,10 +169,7 @@
   .teamsbtn{position:absolute;top:64px;right:14px;z-index:6;height:34px;padding:0 12px;border-radius:10px;
     border:1px solid var(--panel-line);background:var(--panel);backdrop-filter:blur(8px);color:#eef2f7;
     font:600 12px Inter;cursor:pointer}
-  .satbtn{position:absolute;top:64px;right:118px;z-index:6;height:34px;padding:0 12px;border-radius:10px;
-    border:1px solid var(--panel-line);background:var(--panel);backdrop-filter:blur(8px);color:#eef2f7;
-    font:600 12px Inter;cursor:pointer}
-  .satbtn.on{background:var(--jaune);color:#111;border-color:transparent}
+
   .teamspanel{position:absolute;top:106px;right:14px;z-index:8;width:min(330px,90vw);max-height:66vh;overflow-y:auto;
     background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--panel-line);border-radius:14px;
     padding:10px;display:none}
@@ -193,6 +192,7 @@
   .keyhint{position:absolute;right:14px;bottom:150px;z-index:5;font:500 10px/1 Inter;color:var(--muted);
     background:var(--panel);border:1px solid var(--panel-line);border-radius:8px;padding:5px 8px;backdrop-filter:blur(6px)}
   @media (pointer:coarse){.keyhint{display:none}}
+  .rider-ico{width:40px;height:34px;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));will-change:transform}
   @media (prefers-reduced-motion:reduce){ .btn{transition:none} }
 </style>
 </head>
@@ -205,7 +205,6 @@
   <label for="stage">Etapa</label>
   <select id="stage" aria-label="Seleccionar etapa"></select>
 </div>
-<button class="satbtn" id="satbtn" title="Alternar imagen satélite">🛰 Satélite</button>
 <button class="teamsbtn" id="teamsbtn" title="Equipos y corredores">👥 Equipos</button>
 <div class="teamspanel" id="teamspanel"></div>
 <div class="peakcard" id="peakcard"></div>
@@ -224,6 +223,7 @@
       <button data-speed="1" aria-pressed="true">1×</button>
       <button data-speed="2">2×</button>
       <button data-speed="4">4×</button>
+      <button data-speed="8">8×</button>
     </div>
   </div>
   <div class="profile-wrap"><svg class="profile" id="profile" preserveAspectRatio="none"></svg></div>
@@ -240,7 +240,7 @@
   <div class="row"><span class="sw" style="width:12px;height:12px;border-radius:50%;background:#111;border:2px solid #fff"></span>Meta</div>
 </div>
 <div class="ovcard" id="ovcard"></div>
-<div class="attrib">Trazado y altimetría: GPX oficial · Terreno: AWS · Edificios: OpenFreeMap/OSM · MapLibre</div>
+<div class="attrib">GPX oficial · Satélite: Esri · Relieve: AWS · Edificios: OpenFreeMap/OSM · MapLibre</div>
 <div class="loading" id="loading">Cargando terreno…</div>
 
 <script>
@@ -294,28 +294,20 @@ document.addEventListener('keydown',e=>{
   }
   if(used)e.preventDefault();
 });
-/* Imagen satélite (ESRI World Imagery) con sombreado sutil encima */
-let satOn=false;
+/* Imagen satélite (ESRI World Imagery) como vista única y predeterminada, con relieve sutil encima */
 function ensureSat(){
   if(map.getSource('sat'))return;
   map.addSource('sat',{type:'raster',tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
     tileSize:256,maxzoom:19,attribution:'Esri'});
-  map.addLayer({id:'sat',type:'raster',source:'sat',layout:{visibility:'none'},
+  map.addLayer({id:'sat',type:'raster',source:'sat',
     paint:{'raster-opacity':1,'raster-saturation':-.12,'raster-brightness-max':.95}},'hills');
   const lys=map.getStyle().layers, hi=lys.findIndex(l=>l.id==='hills');
   const beforeId=(hi>=0&&lys[hi+1])?lys[hi+1].id:undefined;
-  map.addLayer({id:'satshade',type:'hillshade',source:'dem',layout:{visibility:'none'},
-    paint:{'hillshade-shadow-color':'rgba(6,9,14,.85)','hillshade-highlight-color':'rgba(255,255,255,.14)',
-           'hillshade-accent-color':'rgba(10,14,20,.4)','hillshade-exaggeration':.55}},beforeId);
+  map.addLayer({id:'satshade',type:'hillshade',source:'dem',
+    paint:{'hillshade-shadow-color':'rgba(6,9,14,.7)','hillshade-highlight-color':'rgba(255,255,255,.12)',
+           'hillshade-accent-color':'rgba(10,14,20,.35)','hillshade-exaggeration':.5}},beforeId);
+  map.setLayoutProperty('hills','visibility','none'); // el relieve gris base queda oculto bajo el satélite
 }
-function toggleSat(){
-  ensureSat(); satOn=!satOn;
-  map.setLayoutProperty('sat','visibility',satOn?'visible':'none');
-  map.setLayoutProperty('satshade','visibility',satOn?'visible':'none');
-  map.setLayoutProperty('hills','visibility',satOn?'none':'visible');
-  document.getElementById('satbtn').classList.toggle('on',satOn);
-}
-document.getElementById('satbtn').onclick=toggleSat;
 
 const R=6371000,rad=d=>d*Math.PI/180;
 function hav(a,b){const dLat=rad(b[1]-a[1]),dLng=rad(b[0]-a[0]);
@@ -325,7 +317,7 @@ function brng(a,b){const y=Math.sin(rad(b[0]-a[0]))*Math.cos(rad(b[1]));
   const x=Math.cos(rad(a[1]))*Math.sin(rad(b[1]))-Math.sin(rad(a[1]))*Math.cos(rad(b[1]))*Math.cos(rad(b[0]-a[0]));
   return (Math.atan2(y,x)*180/Math.PI+360)%360;}
 
-let stage, COORDS, CUM, TOTAL, ELEV, markerEls=[];
+let stage, COORDS, CUM, TOTAL, ELEV, markerEls=[], riderMarker=null;
 const svg=document.getElementById('profile'), NS='http://www.w3.org/2000/svg';
 let W=1100,H=118,PAD=6,GEOM={};
 
@@ -468,6 +460,31 @@ function etaRangeAtKm(km){
   return {r:fmtHM(r), m:fmtHM(m), l:fmtHM(l)};
 }
 function etaAtKm(km){const rr=etaRangeAtKm(km);return rr?rr.m:null;}
+/* Coloca la ficha (peakcard) en el hueco libre de la derecha: debajo del panel de puertos
+   (si está abierto) y por encima del HUD/dock inferior, sin solapar nada fijo. */
+function positionPeak(){
+  const el=document.getElementById('peakcard');
+  const panel=document.getElementById('climbspanel');
+  const dock=document.querySelector('.dock');
+  const vw=window.innerWidth;
+  // margen superior: bajo el panel de puertos si está abierto/visible, si no bajo el selector
+  let top=70;
+  if(panel && panel.classList.contains('open')){
+    const r=panel.getBoundingClientRect();
+    top=r.bottom+12;
+  } else {
+    top=112; // bajo el selector de etapa
+  }
+  // margen inferior: por encima del dock (HUD + controles)
+  let bottomGap=24;
+  if(dock){ const dr=dock.getBoundingClientRect(); bottomGap=(window.innerHeight-dr.top)+14; }
+  if(vw<=640){ // móvil: ancho completo abajo, gestionado por la media query
+    el.style.top=''; el.style.maxHeight='';
+    return;
+  }
+  el.style.top=top+'px';
+  el.style.maxHeight=(window.innerHeight-top-bottomGap)+'px';
+}
 function showSprint(){
   const sp=SPRINTS[stage.number];if(!sp)return;
   const el=document.getElementById('peakcard');
@@ -477,7 +494,7 @@ function showSprint(){
     (SCHED[stage.number]&&!SCHED[stage.number].tt?(r=>'<div class="kom"><b>🕐 Paso estimado</b> · '+r.r+' (40) · <b>'+r.m+'</b> (38) · '+r.l+' (36) km/h</div>')(etaRangeAtKm(sp.km)):'')+
     '<div class="kom"><b>🟢 Maillot verde</b> · Puntos: '+SPRINT_PTS+' (15 primeros)</div>'+
     '<div class="notas">Sin bonificación de segundos: desde 2025 los sprints intermedios solo puntúan para la regularidad. En 2026 el máximo sube a 25 puntos.</div>';
-  el.classList.add('show');
+  el.classList.add('show'); positionPeak();
   el.querySelector('.x').onclick=()=>el.classList.remove('show');
 }
 function addMarkers(){
@@ -525,7 +542,7 @@ function showPeak(c){
     '<div class="kom"><b>⛰ Lunares</b> · Puntos: '+(KOM_PTS[c.cat]||'—')+' &nbsp;·&nbsp; <b>Bonificación</b>: no (solo en meta, 10·6·4 s)</div>'+
     (info.rec?'<div class="kom"><b>⏱ KOM</b> · '+info.rec+'</div>':'')+
     (info.notas?'<div class="notas">'+info.notas+'</div>':'<div class="notas" style="color:var(--muted)">Sin registro histórico destacado documentado para esta cota.</div>');
-  el.classList.add('show');
+  el.classList.add('show'); positionPeak();
   el.querySelector('.x').onclick=()=>el.classList.remove('show');
 }
 function buildSegFC(){
@@ -547,13 +564,31 @@ function setRouteSources(){
     map.addLayer({id:'route-color',type:'line',source:'routeseg',layout:{'line-cap':'round','line-join':'round'},
       paint:{'line-width':4,'line-color':['step',['get','g'],'#F2D024',2,'#F5A623',5,'#E4032E',8,'#B01030',12,'#1a1a1a']}});
     map.addSource('rider',{type:'geojson',data:{type:'Feature',geometry:{type:'Point',coordinates:[COORDS[0][0],COORDS[0][1]]}}});
-    map.addLayer({id:'rider-glow',type:'circle',source:'rider',paint:{'circle-radius':13,'circle-color':'#E4032E','circle-opacity':.35,'circle-blur':1}});
-    map.addLayer({id:'rider-dot',type:'circle',source:'rider',paint:{'circle-radius':6,'circle-color':'#fff','circle-stroke-color':'#E4032E','circle-stroke-width':3}});
+    map.addLayer({id:'rider-glow',type:'circle',source:'rider',paint:{'circle-radius':14,'circle-color':'#FFD400','circle-opacity':.28,'circle-blur':1}});
+    if(!riderMarker){
+      const el=document.createElement('div'); el.className='rider-ico';
+      el.innerHTML=RIDER_SVG;
+      riderMarker=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([COORDS[0][0],COORDS[0][1]]).addTo(map);
+    }
   }
 }
+const RIDER_SVG='<svg viewBox="0 0 40 34" width="40" height="34">'+
+  '<ellipse cx="20" cy="31" rx="12" ry="3" fill="rgba(0,0,0,.35)"/>'+
+  '<circle cx="10" cy="24" r="6.5" fill="none" stroke="#111" stroke-width="2"/>'+
+  '<circle cx="30" cy="24" r="6.5" fill="none" stroke="#111" stroke-width="2"/>'+
+  '<path d="M10 24 L18 24 L24 16 L14 16" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
+  '<line x1="30" y1="24" x2="24" y2="16" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>'+
+  '<line x1="18" y1="24" x2="22" y2="24" stroke="#1a1a1a" stroke-width="2"/>'+
+  '<path d="M14 16 L12 12" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>'+
+  '<path d="M22 15 C 21 11, 19 9, 17 8" fill="none" stroke="#FFD400" stroke-width="4.5" stroke-linecap="round"/>'+ /* torso maillot */
+  '<circle cx="16" cy="6" r="3" fill="#FFD400" stroke="#111" stroke-width="1"/>'+ /* casco */
+  '<path d="M17 8 L24 12" stroke="#FFD400" stroke-width="3.5" stroke-linecap="round"/>'+ /* brazo */
+  '<path d="M20 15 L26 20" stroke="#111" stroke-width="3" stroke-linecap="round"/>'+ /* pierna */
+  '</svg>';
 function moveRider(dist){
   const {p,brg,ele}=pointAt(dist);
   map.getSource('rider').setData({type:'Feature',geometry:{type:'Point',coordinates:p}});
+  if(riderMarker)riderMarker.setLngLat(p);
   updateProfile(dist);
   updateHud(dist,ele);
   return {p,brg};
@@ -584,11 +619,10 @@ function buildClimbsPanel(){
   CLIMBS.forEach((c)=>{
     const div=document.createElement('div');div.className='climbrow';
     div.innerHTML=`<div class="cat" style="background:${catColor(c.cat)}">${c.cat}</div>`+
-      `<div class="info"><div class="nm">${c.name} <span class="pinfo" style="opacity:.55;cursor:pointer">ⓘ</span></div>`+
+      `<div class="info"><div class="nm">${c.name}</div>`+
       `<div class="sub">km ${c.dStart<c.dEnd?(c.dEnd/1000).toFixed(0):'—'} · ${(c.len/1000).toFixed(1).replace('.',',')} km · ${c.avg.toFixed(1).replace('.',',')}% · +${Math.round(c.gain)} m</div></div>`+
       miniProfile(c);
-    div.onclick=()=>{dist=c.dEnd;pause();const {p}=moveRider(dist);map.panTo(p,{duration:500});};
-    div.querySelector('.pinfo').onclick=(ev)=>{ev.stopPropagation();showPeak(c);};
+    div.onclick=()=>{dist=c.dEnd;pause();const {p}=moveRider(dist);map.panTo(p,{duration:500});showPeak(c);};
     list.appendChild(div);
   });
 }
@@ -648,7 +682,9 @@ document.getElementById('overview').onclick=overview;
 document.getElementById('puertos').onclick=()=>{
   const p=document.getElementById('climbspanel'),open=p.classList.toggle('open');
   document.getElementById('puertos').setAttribute('aria-pressed',open?'true':'false');
+  const pc=document.getElementById('peakcard'); if(pc.classList.contains('show'))positionPeak();
 };
+window.addEventListener('resize',()=>{const pc=document.getElementById('peakcard');if(pc.classList.contains('show'))positionPeak();});
 document.querySelectorAll('.speed button').forEach(b=>b.onclick=()=>{
   speed=parseFloat(b.dataset.speed);
   document.querySelectorAll('.speed button').forEach(x=>x.setAttribute('aria-pressed','false'));
@@ -897,8 +933,9 @@ function overviewCardTop(){
 function enterOverview(){
   inOverview=true; pause(); ensureOverviewLayers(); buildOverviewBadges(); showBadges(true);
   OV_LAYERS.forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','visible');});
-  ['route-glow','route-color','rider-glow','rider-dot','buildings'].forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','none');});
+  ['route-glow','route-color','rider-glow','buildings'].forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','none');});
   clearMarkers();
+  if(riderMarker)riderMarker.getElement().style.display='none';
   document.querySelector('.dock').style.display='none';
   document.getElementById('climbspanel').classList.remove('open');
   document.getElementById('teamspanel').classList.remove('open');
@@ -913,7 +950,8 @@ function enterOverview(){
 function exitOverview(){
   inOverview=false; showBadges(false);
   OV_LAYERS.forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','none');});
-  ['route-glow','route-color','rider-glow','rider-dot','buildings'].forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','visible');});
+  ['route-glow','route-color','rider-glow','buildings'].forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','visible');});
+  if(riderMarker)riderMarker.getElement().style.display='';
   document.querySelector('.dock').style.display='';
   document.getElementById('legend').classList.remove('show');
   document.getElementById('ovcard').classList.remove('show');
@@ -989,6 +1027,7 @@ function loadStage(n){
 }
 
 map.on('load',()=>{
+  ensureSat(); // vista satélite predeterminada
   // edificios 3D (fuente vectorial gratuita, sin clave)
   try{
     map.addSource('ofm',{type:'vector',url:'https://tiles.openfreemap.org/planet'});
