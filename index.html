@@ -3,7 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
-<title>Tour de France 2026 · Visor 3D</title>
+<title>Tour de France 2026 · Visor 3D interactivo</title>
+<meta property="og:title" content="Tour de France 2026 · Visor 3D">
+<meta property="og:description" content="Recorrido interactivo en 3D de las 21 etapas del Tour de Francia 2026: puertos oficiales, horarios estimados, equipos y clasificaciones en vivo.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thorito27.github.io/TourDeFrance2026/">
+<meta name="twitter:card" content="summary">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -42,6 +47,8 @@
     background:var(--panel);backdrop-filter:blur(10px);border:1px solid var(--panel-line);
     border-radius:12px;padding:7px 9px}
   .picker label{font:600 10px/1 Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .liveupdate{margin-top:10px;font:600 10px/1.3 Inter;color:var(--muted);display:flex;align-items:center;gap:5px}
+  .liveupdate::before{content:'';flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
   .picker select{appearance:none;background:#151a21;color:var(--text);border:1px solid var(--panel-line);
     border-radius:8px;padding:8px 30px 8px 11px;font:600 13px/1 Inter;cursor:pointer;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='%239aa4b0' d='M0 0l5 7 5-7z'/%3E%3C/svg%3E");
@@ -928,9 +935,17 @@ function renderCard(){
       <div><span class="k">Distancia</span><span class="v">${String(stage.distance_km).replace('.',',')} km</span></div>
       <div><span class="k">Desnivel</span><span class="v">${stage.elevation_gain_m.toLocaleString('es')} m</span></div>
       <div><span class="k">Puertos</span><span class="v">${CLIMBS.length||'—'}</span></div>
-    </div>${stage.gpx_note?'<div style="margin-top:9px;font:500 10px/1.3 Inter;color:var(--muted)">⚠ El trazado GPX de esta etapa difiere ligeramente del kilometraje oficial.</div>':''}${buildSchedule()}`;
+    </div>${stage.gpx_note?'<div style="margin-top:9px;font:500 10px/1.3 Inter;color:var(--muted)">⚠ El trazado GPX de esta etapa difiere ligeramente del kilometraje oficial.</div>':''}<div class="liveupdate" id="liveupdate" style="display:none"></div>${buildSchedule()}`;
   const sh=document.getElementById('schedhead');
   if(sh)sh.onclick=()=>document.getElementById('schedbody').classList.toggle('open');
+  updateLiveStamp();
+}
+/* Aviso visible de "última actualización" de los datos vivos (dentro de la ficha) */
+function updateLiveStamp(){
+  const el=document.getElementById('liveupdate');
+  if(!el)return;
+  if(LIVE.actualizado){el.textContent='Datos actualizados: '+LIVE.actualizado;el.style.display='';}
+  else{el.style.display='none';}
 }
 /* ===== Vista general (Etapa 0) ===== */
 const TYPE_COLOR_EXPR=['match',['get','type'],'flat','#1E90D6','hilly','#F5A623','mountain','#E4032E','TTT','#1F9E57','ITT','#1F9E57','#999'];
@@ -1060,6 +1075,10 @@ async function loadLive(){
     if(r.ok){ LIVE=Object.assign(LIVE,await r.json());
       DNF=new Set((LIVE.abandonos||[]).map(s=>s.trim())); }
   }catch(e){ /* sin archivo o sin red: seguimos con lo local */ }
+  // refresca el aviso de "última actualización" y, si el panel de equipos está abierto, lo reconstruye
+  updateLiveStamp();
+  const tp=document.getElementById('teamspanel');
+  if(tp && tp.classList.contains('open')) buildTeamsPanel();
 }
 function jerseySVG(c1,c2){
   return '<svg width="30" height="26" viewBox="0 0 30 26">'+
@@ -1138,8 +1157,13 @@ document.getElementById('teamsbtn').onclick=()=>{
   p.classList.toggle('open');
   document.getElementById('climbspanel').classList.remove('open');
 };
+/* Mantiene la URL sincronizada con la etapa vista (?etapa=N) sin ensuciar el historial */
+function updateEtapaUrl(n){
+  try{const u=new URL(location.href);u.searchParams.set('etapa',n);history.replaceState(null,'',u);}catch(e){}
+}
 function loadStage(n){
   n=parseInt(n);
+  updateEtapaUrl(n);
   if(n===0){enterOverview();return;}
   if(inOverview)exitOverview();
   stage=DATA.stages.find(s=>s.number===n);
@@ -1174,12 +1198,20 @@ map.on('load',()=>{
   sel.onchange=()=>loadStage(parseInt(sel.value));
   computeAllBounds();
   const l=document.getElementById('loading');l.dataset.done='1';l.style.display='none';
-  // durante la carrera, abre directamente la etapa del día
-  const iso=new Date().toISOString().slice(0,10);
-  const today=DATA.stages.find(s=>s.date===iso);
-  const initial=today?today.number:0;
+  // etapa inicial: 1º un enlace directo ?etapa=N (0=vista general, 1..21=etapa); si no, la lógica por defecto
+  let initial;
+  const pEtapa=new URLSearchParams(location.search).get('etapa');
+  if(pEtapa!==null && /^\d+$/.test(pEtapa.trim()) && (+pEtapa===0 || DATA.stages.some(s=>s.number===+pEtapa))){
+    initial=+pEtapa;
+  }else{
+    // durante la carrera, abre directamente la etapa del día
+    const iso=new Date().toISOString().slice(0,10);
+    const today=DATA.stages.find(s=>s.date===iso);
+    initial=today?today.number:0;
+  }
   sel.value=initial; loadStage(initial);
   loadLive(); // carga abandonos y clasificaciones del repo (si existen)
+  setInterval(loadLive,180000); // auto-refresco de datos vivos cada 3 minutos
 });
 map.on('error',()=>{});
 </script>
