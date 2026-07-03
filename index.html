@@ -699,9 +699,25 @@ function endDrag(){
   dragging=false; map.dragPan.enable(); map.getCanvas().style.cursor='';
 }
 map.on('mousedown',startDrag); map.on('touchstart',startDrag);
-map.on('mousemove',e=>{ if(dragging){doDrag(e);} else if(COORDS){ map.getCanvas().style.cursor=nearRider(e.point)?'grab':''; } });
+map.on('mousemove',e=>{
+  if(dragging){doDrag(e);return;}
+  if(!COORDS){return;}
+  if(nearRider(e.point)){map.getCanvas().style.cursor='grab';return;}
+  const onRoute=!inOverview && map.queryRenderedFeatures(e.point,{layers:['route-glow','route-color']}).length>0;
+  map.getCanvas().style.cursor=onRoute?'pointer':'';
+});
 map.on('touchmove',doDrag);
 map.on('mouseup',endDrag); map.on('touchend',endDrag);
+
+/* Click directo sobre el recorrido: traslada la bici a ese punto (mismo enganche al trazado que el arrastre) */
+function clickToRoute(e){
+  if(inOverview || !COORDS || dragging) return;
+  const d=nearestDist(e.lngLat);
+  const scr=map.project(pointAt(d).p);
+  if(Math.hypot(scr.x-e.point.x, scr.y-e.point.y) > 30) return; // el toque no cae sobre el recorrido: no mover
+  dist=d; pause(); moveRider(dist);
+}
+map.on('click', clickToRoute);
 
 /* flythrough */
 let playing=false,dist=0,speed=1,last=0;
