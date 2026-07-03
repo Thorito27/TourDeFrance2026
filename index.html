@@ -147,9 +147,26 @@
   .climbrow .nm{font:600 13px/1.1 Oswald;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .climbrow .sub{font:500 10px/1.3 Inter;color:var(--muted);margin-top:2px}
   .climbrow svg{flex:0 0 auto}
+  /* panel meteo (mismo patrón visual que el panel de puertos) */
+  .meteopanel{position:absolute;top:calc(70px + env(safe-area-inset-top));right:14px;z-index:7;width:min(320px,84vw);max-height:58vh;overflow-y:auto;
+    background:var(--panel);backdrop-filter:blur(10px);border:1px solid var(--panel-line);border-radius:12px;padding:10px;display:none}
+  .meteopanel.open{display:block}
+  .meteopanel h3{margin:2px 4px 8px;font:600 12px/1 Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .meteorow{padding:8px;border-radius:9px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+  .meteorow:nth-of-type(odd){background:rgba(255,255,255,.04)}
+  .meteorow .mpt{min-width:0}
+  .meteorow .mnm{font:600 12.5px/1.15 Oswald;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meteorow .mh{font:500 10px/1.3 Inter;color:var(--muted);margin-top:1px}
+  .meteorow .mvals{flex:0 0 auto;display:flex;gap:9px;font:600 11px/1 Inter;color:var(--text);white-space:nowrap}
+  .meteonote{padding:8px 6px;font:500 10.5px/1.4 Inter;color:var(--muted)}
+  #meteobtn[aria-pressed="true"]{background:rgba(255,212,0,.16);border-color:transparent;color:var(--jaune)}
+  .countdown{margin-top:9px;font:600 11px/1.2 Inter;color:var(--muted);display:flex;align-items:center;gap:5px}
+  .countdown::before{content:'';flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--jaune);box-shadow:0 0 6px var(--jaune)}
+  .tznote{margin:1px 4px 7px;font:500 10px/1.3 Inter;color:var(--muted)}
   @media (max-width:640px){
     .hud .v{font-size:14px}.hud .cell{padding:6px 4px}
     .climbspanel{top:auto;bottom:200px;right:10px;max-height:42vh}
+    .meteopanel{top:auto;bottom:200px;right:10px;left:10px;width:auto;max-height:44vh}
     .peakcard{top:auto;bottom:150px;left:10px;right:10px;width:auto;max-height:40vh}
     .teamspanel{top:106px;left:10px;right:10px;width:auto;max-height:60vh}
   }
@@ -268,6 +285,7 @@
     <button class="btn" id="overview"><span class="lbl">Vista general</span> ⤢</button>
     <button class="btn" id="puertos" aria-pressed="false">⛰ <span class="lbl">Puertos</span></button>
     <button class="btn" id="toggleProfile" aria-pressed="true" title="Ocultar perfil">📈 <span class="lbl">Perfil</span></button>
+    <button class="btn" id="meteobtn" aria-pressed="false" title="Previsión meteorológica">🌦️ <span class="lbl">Meteo</span></button>
     <div class="spacer"></div>
     <div class="speed" role="group" aria-label="Velocidad">
       <button data-speed="0.5">0.5×</button>
@@ -281,6 +299,7 @@
 </div>
 
 <aside class="climbspanel" id="climbspanel"><h3>Puertos y cotas</h3><div id="climbslist"></div></aside>
+<aside class="meteopanel" id="meteopanel"><h3>Previsión meteo</h3><div id="meteolist"></div></aside>
 <div class="legend" id="legend">
   <h4>Tipo de etapa</h4>
   <div class="row"><span class="sw" style="background:#1E90D6"></span>Llana</div>
@@ -291,7 +310,7 @@
   <div class="row"><span class="sw" style="width:12px;height:12px;border-radius:50%;background:#111;border:2px solid #fff"></span>Meta</div>
 </div>
 <div class="ovcard" id="ovcard"></div>
-<div class="attrib">GPX oficial · Satélite: Esri · Relieve: AWS · Edificios: OpenFreeMap/OSM · MapLibre</div>
+<div class="attrib">GPX oficial · Satélite: Esri · Relieve: AWS · Edificios: OpenFreeMap/OSM · MapLibre · Datos meteo: Open-Meteo.com</div>
 <div class="loading" id="loading">Cargando terreno…</div>
 
 <script>
@@ -749,8 +768,101 @@ document.getElementById('overview').onclick=overview;
 document.getElementById('puertos').onclick=()=>{
   const p=document.getElementById('climbspanel'),open=p.classList.toggle('open');
   document.getElementById('puertos').setAttribute('aria-pressed',open?'true':'false');
+  document.getElementById('meteopanel').classList.remove('open');
+  document.getElementById('meteobtn').setAttribute('aria-pressed','false');
   const pc=document.getElementById('peakcard'); if(pc.classList.contains('show'))positionPeak();
 };
+
+/* ===== Previsión meteorológica (Open-Meteo, sin clave) ===== */
+const METEO_CACHE={};              // caché en memoria por nº de etapa
+const METEO_TTL=30*60*1000;        // 30 minutos
+/* Días de diferencia entre la fecha de la etapa y hoy (a medianoche local) */
+function meteoDaysUntil(){
+  const d=new Date(stage.date+'T00:00:00');
+  const now=new Date(), today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  return Math.round((d-today)/86400000);
+}
+/* Puntos de interés de la etapa con su hora estimada de paso (escenario central 38 km/h) */
+function meteoPoints(){
+  const sc=SCHED[stage.number]||{};
+  const pts=[];
+  pts.push({name:'Salida · '+stage.start, lat:stage.coords[0][1], lon:stage.coords[0][0],
+            km:0, eta:sc.sn?fmtHM(parseHM(sc.sn)+15):(etaAtKm(0)||null)});
+  const sp=SPRINTS[stage.number];
+  if(sp){const idx=idxAtOfficialKm(sp.km);
+    pts.push({name:'Sprint · '+sp.name, lat:COORDS[idx][1], lon:COORDS[idx][0], km:sp.km, eta:etaAtKm(sp.km)});}
+  CLIMBS.forEach(c=>{
+    const kmOff=c.dEnd/(stage.gpx_km*1000)*stage.distance_km;
+    pts.push({name:c.cat+' · '+c.name, lat:COORDS[c.i1][1], lon:COORDS[c.i1][0], km:kmOff, eta:etaAtKm(kmOff)});
+  });
+  const last=stage.coords[stage.coords.length-1];
+  pts.push({name:'Meta · '+stage.finish, lat:last[1], lon:last[0], km:stage.distance_km, eta:sc.fe||null});
+  pts.sort((a,b)=>a.km-b.km);
+  return pts;
+}
+async function fetchMeteoForPoint(pt){
+  const u='https://api.open-meteo.com/v1/forecast?latitude='+pt.lat.toFixed(4)+'&longitude='+pt.lon.toFixed(4)+
+    '&hourly=temperature_2m,precipitation_probability,wind_speed_10m&start_date='+stage.date+'&end_date='+stage.date+'&timezone=auto';
+  const r=await fetch(u); if(!r.ok) throw new Error('http '+r.status);
+  const j=await r.json(); const times=(j.hourly&&j.hourly.time)||[];
+  if(!times.length) return null;
+  const target=parseHM(pt.eta||SCHED[stage.number]?.sn||'12:00');
+  let bi=0,bd=Infinity;
+  times.forEach((ts,i)=>{const diff=Math.abs(parseHM(ts.slice(11,16))-target); if(diff<bd){bd=diff;bi=i;}});
+  return {temp:j.hourly.temperature_2m[bi], pop:j.hourly.precipitation_probability[bi], wind:j.hourly.wind_speed_10m[bi]};
+}
+async function buildMeteoPanel(){
+  const list=document.getElementById('meteolist'); if(!list||!stage) return;
+  if(meteoDaysUntil()>9){
+    list.innerHTML='<div class="meteonote">La previsión aún no está disponible para una fecha tan lejana. Vuelve a consultarlo más cerca de la etapa.</div>';
+    return;
+  }
+  const cached=METEO_CACHE[stage.number];
+  if(cached && (Date.now()-cached.t)<METEO_TTL){ list.innerHTML=cached.html; return; }
+  list.innerHTML='<div class="meteonote">Cargando previsión…</div>';
+  const reqStage=stage.number, pts=meteoPoints();
+  try{
+    const res=await Promise.all(pts.map(p=>fetchMeteoForPoint(p).then(w=>({p,w})).catch(()=>({p,w:null}))));
+    if(stage.number!==reqStage) return; // el usuario cambió de etapa mientras cargaba
+    let html='';
+    res.forEach(({p,w})=>{
+      const temp=(w&&w.temp!=null)?Math.round(w.temp)+'°':'—';
+      const pop=(w&&w.pop!=null)?w.pop+'%':'—';
+      const wind=(w&&w.wind!=null)?Math.round(w.wind)+' km/h':'—';
+      html+='<div class="meteorow"><div class="mpt"><div class="mnm">'+p.name+'</div><div class="mh">'+(p.eta||'—')+'</div></div>'+
+        '<div class="mvals"><span title="Temperatura">🌡️ '+temp+'</span><span title="Prob. lluvia">💧 '+pop+'</span><span title="Viento">💨 '+wind+'</span></div></div>';
+    });
+    html+='<div class="meteonote">Datos meteo: Open-Meteo.com</div>';
+    METEO_CACHE[stage.number]={t:Date.now(), html};
+    list.innerHTML=html;
+  }catch(e){
+    list.innerHTML='<div class="meteonote">No se pudo cargar la previsión meteo ahora mismo. Inténtalo de nuevo en un momento.</div>';
+  }
+}
+document.getElementById('meteobtn').onclick=()=>{
+  const p=document.getElementById('meteopanel'), open=p.classList.toggle('open');
+  document.getElementById('meteobtn').setAttribute('aria-pressed',open?'true':'false');
+  document.getElementById('climbspanel').classList.remove('open');
+  document.getElementById('puertos').setAttribute('aria-pressed','false');
+  document.getElementById('teamspanel').classList.remove('open');
+  if(open) buildMeteoPanel();
+};
+
+/* ===== Cuenta atrás discreta para la salida de la etapa del día ===== */
+function updateCountdown(){
+  const el=document.getElementById('countdown'); if(!el||!stage) return;
+  const sc=SCHED[stage.number];
+  const now=new Date();
+  const todayIso=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  if(!sc||!sc.sn||stage.date!==todayIso){el.style.display='none';return;}
+  const [h,m]=sc.sn.split(':').map(Number);
+  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
+  const diff=start-now;
+  if(diff<=0){el.style.display='none';return;}
+  const mins=Math.floor(diff/60000);
+  el.textContent=(mins<60)?('Sale en '+mins+' min'):('Sale en '+Math.floor(mins/60)+'h '+(mins%60)+'min');
+  el.style.display='';
+}
 /* Ocultar/mostrar la gráfica de perfil (con preferencia persistente).
    Usa max-height/opacity (no display:none) para que drawProfile/updateProfile
    sigan midiendo el SVG y dibujando aunque el perfil esté oculto. */
@@ -901,6 +1013,7 @@ function buildSchedule(){
   if(sc.tt){
     return '<div class="sched"><div class="shead" id="schedhead">🕐 Horario <span>▾</span></div>'+
       '<div class="sbody open" id="schedbody">'+
+      '<div class="tznote">Hora local de Francia/España (CEST)</div>'+
       '<div class="srow"><span class="st">'+(stage.number===1?'Primer equipo':'Primer corredor')+'</span><span class="sk"></span><span class="sh">'+sc.sn+'</span></div>'+
       '<div class="srow"><span class="st">Última llegada</span><span class="sk"></span><span class="sh">'+sc.fe+'</span></div>'+
       '<div class="snote">Horario oficial CET. Los favoritos salen al final.</div></div></div>';
@@ -915,6 +1028,7 @@ function buildSchedule(){
   rows.push({km:stage.distance_km,label:'Meta · '+stage.finish,rng:{r:sc.fe,m:sc.fe,l:sc.fe},meta:1});
   rows.sort((a,b)=>a.km-b.km);
   let html='<div class="sched"><div class="shead" id="schedhead">🕐 Horario y pasos estimados <span>▾</span></div><div class="sbody" id="schedbody">'+
+    '<div class="tznote">Hora local de Francia/España (CEST)</div>'+
     '<div class="srow shdr"><span class="scat"></span><span class="st"></span><span class="sk">km</span>'+
     '<span class="sh3">40</span><span class="sh3">38</span><span class="sh3">36</span></div>';
   rows.forEach(r=>{
@@ -935,10 +1049,11 @@ function renderCard(){
       <div><span class="k">Distancia</span><span class="v">${String(stage.distance_km).replace('.',',')} km</span></div>
       <div><span class="k">Desnivel</span><span class="v">${stage.elevation_gain_m.toLocaleString('es')} m</span></div>
       <div><span class="k">Puertos</span><span class="v">${CLIMBS.length||'—'}</span></div>
-    </div>${stage.gpx_note?'<div style="margin-top:9px;font:500 10px/1.3 Inter;color:var(--muted)">⚠ El trazado GPX de esta etapa difiere ligeramente del kilometraje oficial.</div>':''}<div class="liveupdate" id="liveupdate" style="display:none"></div>${buildSchedule()}`;
+    </div>${stage.gpx_note?'<div style="margin-top:9px;font:500 10px/1.3 Inter;color:var(--muted)">⚠ El trazado GPX de esta etapa difiere ligeramente del kilometraje oficial.</div>':''}<div class="countdown" id="countdown" style="display:none"></div><div class="liveupdate" id="liveupdate" style="display:none"></div>${buildSchedule()}`;
   const sh=document.getElementById('schedhead');
   if(sh)sh.onclick=()=>document.getElementById('schedbody').classList.toggle('open');
   updateLiveStamp();
+  updateCountdown();
 }
 /* Aviso visible de "última actualización" de los datos vivos (dentro de la ficha) */
 function updateLiveStamp(){
@@ -1156,6 +1271,8 @@ document.getElementById('teamsbtn').onclick=()=>{
   buildTeamsPanel();
   p.classList.toggle('open');
   document.getElementById('climbspanel').classList.remove('open');
+  document.getElementById('meteopanel').classList.remove('open');
+  document.getElementById('meteobtn').setAttribute('aria-pressed','false');
 };
 /* Mantiene la URL sincronizada con la etapa vista (?etapa=N) sin ensuciar el historial */
 function updateEtapaUrl(n){
@@ -1171,6 +1288,7 @@ function loadStage(n){
   clearMarkers(); setRouteSources(); addMarkers();
   document.getElementById('peakcard').classList.remove('show');
   drawProfile(); buildClimbsPanel(); dist=0; pause(); moveRider(0); renderCard(); overview();
+  const mp=document.getElementById('meteopanel'); if(mp&&mp.classList.contains('open'))buildMeteoPanel();
 }
 
 map.on('load',()=>{
@@ -1212,6 +1330,7 @@ map.on('load',()=>{
   sel.value=initial; loadStage(initial);
   loadLive(); // carga abandonos y clasificaciones del repo (si existen)
   setInterval(loadLive,180000); // auto-refresco de datos vivos cada 3 minutos
+  updateCountdown(); setInterval(updateCountdown,30000); // cuenta atrás de salida (etapa del día)
 });
 map.on('error',()=>{});
 </script>
