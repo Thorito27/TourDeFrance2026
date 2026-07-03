@@ -446,8 +446,9 @@ function buildOfficialClimbs(){
   });
 }
 function gradeColor(g){
+  if(g<=-8)return'#4ADE80';
   if(g<2)return'#F2D024'; if(g<5)return'#F5A623'; if(g<8)return'#E4032E';
-  if(g<12)return'#B01030'; return'#1a1a1a';}
+  if(g<12)return'#B01030'; return'#9D4EDD';}
 function catColor(c){return c==='HC'?'#1a1a1a':c==='1'?'#B01030':c==='2'?'#E4032E':c==='3'?'#F5A623':'#4a8f4a';}
 function pointAt(dist){dist=Math.max(0,Math.min(TOTAL,dist));
   let lo=0,hi=CUM.length-1;while(lo<hi){const m=(lo+hi)>>1;if(CUM[m]<dist)lo=m+1;else hi=m;}
@@ -674,7 +675,7 @@ function updateHud(dist,ele){
   document.getElementById('hud').innerHTML=
     `<div class="cell"><div class="k">Km</div><div class="v">${(dist/1000).toFixed(1).replace('.',',')}</div></div>`+
     `<div class="cell"><div class="k">Restan</div><div class="v">${(rem/1000).toFixed(1).replace('.',',')}<small> km</small></div></div>`+
-    `<div class="cell"><div class="k">Rampa</div><div class="v" style="color:${gradeColor(Math.max(0,g))}">${g>=0?'+':''}${g.toFixed(1).replace('.',',')}%</div></div>`+
+    `<div class="cell"><div class="k">Rampa</div><div class="v" style="color:${gradeColor(g)}">${g>=0?'+':''}${g.toFixed(1).replace('.',',')}%</div></div>`+
     `<div class="cell"><div class="k">Altitud</div><div class="v">${Math.round(ele)}<small> m</small></div></div>`+
     `<div class="cell"><div class="k">Desnivel</div><div class="v">+${Math.round(dp)}<small> m</small></div></div>`;
 }
