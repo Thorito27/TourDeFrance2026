@@ -214,6 +214,24 @@
     background:var(--panel);border:1px solid var(--panel-line);border-radius:8px;padding:5px 8px;backdrop-filter:blur(6px)}
   @media (pointer:coarse){.keyhint{display:none}}
   .rider-ico{width:40px;height:34px;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));will-change:transform}
+  .rider .jbadge{width:11px;height:11px;border-radius:3px;flex:0 0 auto;margin-left:auto}
+  .jbadge.j-yel{background:#FFD400}.jbadge.j-grn{background:#1F9E57}
+  .jbadge.j-pois{background:#fff;background-image:radial-gradient(#E4032E 40%,transparent 42%);background-size:5px 5px}
+  .jbadge.j-wht{background:#fff}
+  .tabsrow{display:flex;gap:6px;margin-bottom:9px}
+  .tab{flex:1;height:32px;border-radius:8px;border:1px solid var(--panel-line);background:rgba(255,255,255,.04);
+    color:var(--muted);font:600 11px Inter;cursor:pointer}
+  .tab.on{background:var(--jaune);color:#111;border-color:transparent}
+  .rankblock{margin-bottom:12px}
+  .rankblock h4{margin:0 0 5px;font:600 11px/1 Inter;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .rankrow{display:flex;align-items:center;gap:8px;padding:4px 4px;border-radius:6px;font:500 12px/1.2 Inter}
+  .rankrow:nth-child(even){background:rgba(255,255,255,.03)}
+  .rankrow .rp{min-width:18px;text-align:center;font:700 12px Oswald;color:var(--jaune)}
+  .rankrow .rnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rankrow .rnm small{color:var(--muted);margin-left:6px;font-size:10px}
+  .rankrow .rv{font:600 12px Oswald;color:#eef2f7}
+  .rankrow.empty{color:var(--muted)}
+  .norank{padding:14px 6px;color:var(--muted);font:500 12px/1.5 Inter;text-align:center}
   @media (prefers-reduced-motion:reduce){ .btn{transition:none} }
 </style>
 </head>
@@ -994,9 +1012,21 @@ function goStage(n){document.getElementById('stage').value=n;loadStage(n);}
 
 
 /* ===== Panel de equipos ===== */
-let DNF=new Set();
-try{const s=localStorage.getItem('tdf26dnf');if(s)DNF=new Set(JSON.parse(s));}catch(e){}
-function saveDNF(){try{localStorage.setItem('tdf26dnf',JSON.stringify([...DNF]));}catch(e){}}
+/* ===== Datos en vivo (abandonos + clasificaciones) desde datos-vivos.json =====
+   Se editan en el repo tras cada etapa. Fallback a localStorage para marcado manual local. */
+let LIVE={abandonos:[],general:[],puntos:[],montana:[],jovenes:[],maillots:{},ganadores_etapa:{},actualizado:''};
+let DNF=new Set();          // nombres de corredores retirados (desde JSON)
+let DNF_LOCAL=new Set();    // marcados a mano en este navegador (se suman a los del JSON)
+try{const s=localStorage.getItem('tdf26dnf_local');if(s)DNF_LOCAL=new Set(JSON.parse(s));}catch(e){}
+function saveDNF(){try{localStorage.setItem('tdf26dnf_local',JSON.stringify([...DNF_LOCAL]));}catch(e){}}
+function isDNF(name){return DNF.has(name)||DNF_LOCAL.has(name);}
+async function loadLive(){
+  try{
+    const r=await fetch('datos-vivos.json?_='+Date.now());
+    if(r.ok){ LIVE=Object.assign(LIVE,await r.json());
+      DNF=new Set((LIVE.abandonos||[]).map(s=>s.trim())); }
+  }catch(e){ /* sin archivo o sin red: seguimos con lo local */ }
+}
 function jerseySVG(c1,c2){
   return '<svg width="30" height="26" viewBox="0 0 30 26">'+
     '<path d="M9 2 L21 2 L27 7 L24 12 L21 9 L21 24 L9 24 L9 9 L6 12 L3 7 Z" fill="'+c1+'" stroke="rgba(0,0,0,.35)" stroke-width="1"/>'+
@@ -1005,34 +1035,72 @@ function jerseySVG(c1,c2){
 }
 function buildTeamsPanel(){
   const p=document.getElementById('teamspanel');
-  let html='<h3>Equipos y corredores · 23 × 8</h3>';
+  const totalDNF=new Set([...DNF,...DNF_LOCAL]).size;
+  let html='<div class="tabsrow"><button class="tab on" data-tab="equipos">Equipos</button>'+
+           '<button class="tab" data-tab="clasif">Clasificaciones</button></div>';
+  // --- Vista Equipos ---
+  html+='<div class="tabpane" id="pane-equipos"><h3>23 equipos · 184 corredores'+(totalDNF?' · '+totalDNF+' abandonos':'')+'</h3>';
   TEAMS.forEach((t,ti)=>{
-    const act=t.riders.filter((r,ri)=>!DNF.has(ti+'|'+ri)).length;
+    const act=t.riders.filter(r=>!isDNF(r[0])).length;
     html+='<div class="team" data-t="'+ti+'"><div class="thead">'+jerseySVG(t.c[0],t.c[1])+
       '<span class="tname">'+t.name+'</span><span class="tcount" data-c="'+ti+'">'+act+'/8</span></div><div class="riders">';
-    t.riders.forEach((r,ri)=>{
-      const dnf=DNF.has(ti+'|'+ri)?' dnf':'';
-      html+='<div class="rider'+dnf+'" data-t="'+ti+'" data-r="'+ri+'" title="Toca para marcar abandono">'+
-        '<span class="nat">'+r[1]+'</span><span class="rn">'+r[0]+'</span></div>';
+    t.riders.forEach((r)=>{
+      const nm=r[0];
+      const dnf=isDNF(nm)?' dnf':'';
+      const jer=maillotOf(nm);
+      html+='<div class="rider'+dnf+'" data-n="'+nm.replace(/"/g,'&quot;')+'" title="Toca para marcar/quitar abandono (local)">'+
+        '<span class="nat">'+r[1]+'</span><span class="rn">'+nm+'</span>'+(jer?'<span class="jbadge '+jer+'"></span>':'')+'</div>';
     });
     html+='</div></div>';
   });
-  html+='<div class="teamsfoot">Toca un corredor para tacharlo como abandono (se guarda en este navegador). Maillots estilizados por colores de equipo.'+
-    '<br><button id="dnfreset">Restablecer abandonos</button></div>';
+  html+='<div class="teamsfoot">Los abandonos oficiales se cargan del archivo de datos del repo. También puedes marcar alguno a mano aquí (solo en tu dispositivo).'+
+    (LIVE.actualizado?'<br>Datos actualizados: '+LIVE.actualizado:'')+
+    '<br><button id="dnfreset">Borrar mis marcas locales</button></div></div>';
+  // --- Vista Clasificaciones ---
+  html+='<div class="tabpane" id="pane-clasif" style="display:none">'+rankingsHTML()+'</div>';
   p.innerHTML=html;
+  // interacciones
+  p.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+    p.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    p.querySelector('#pane-equipos').style.display=b.dataset.tab==='equipos'?'block':'none';
+    p.querySelector('#pane-clasif').style.display=b.dataset.tab==='clasif'?'block':'none';
+  });
   p.querySelectorAll('.thead').forEach(el=>el.onclick=()=>el.parentElement.classList.toggle('open'));
   p.querySelectorAll('.rider').forEach(el=>el.onclick=()=>{
-    const k=el.dataset.t+'|'+el.dataset.r;
-    if(DNF.has(k))DNF.delete(k);else DNF.add(k);
+    const nm=el.dataset.n;
+    if(DNF_LOCAL.has(nm))DNF_LOCAL.delete(nm);else DNF_LOCAL.add(nm);
     el.classList.toggle('dnf'); saveDNF();
-    const t=+el.dataset.t, act=TEAMS[t].riders.filter((r,ri)=>!DNF.has(t+'|'+ri)).length;
-    p.querySelector('[data-c="'+t+'"]').textContent=act+'/8';
+    const team=el.closest('.team'), ti=+team.dataset.t;
+    const act=TEAMS[ti].riders.filter(r=>!isDNF(r[0])).length;
+    team.querySelector('.tcount').textContent=act+'/8';
   });
-  document.getElementById('dnfreset').onclick=()=>{DNF.clear();saveDNF();buildTeamsPanel();};
+  const rst=document.getElementById('dnfreset'); if(rst)rst.onclick=()=>{DNF_LOCAL.clear();saveDNF();buildTeamsPanel();};
+}
+function maillotOf(name){
+  const m=LIVE.maillots||{};
+  if(m.amarillo===name)return 'j-yel'; if(m.verde===name)return 'j-grn';
+  if(m.lunares===name)return 'j-pois'; if(m.blanco===name)return 'j-wht'; return '';
+}
+function rankingsHTML(){
+  const blocks=[['general','General','⏱'],['puntos','Puntos','🟢'],['montana','Montaña','⛰'],['jovenes','Jóvenes','⚪']];
+  let any=(LIVE.general&&LIVE.general.length)||(LIVE.puntos&&LIVE.puntos.length)||(LIVE.montana&&LIVE.montana.length)||(LIVE.jovenes&&LIVE.jovenes.length);
+  if(!any)return '<div class="norank">Aún no hay clasificaciones cargadas.<br>Se mostrarán aquí cuando arranque la carrera y actualices el archivo de datos.</div>';
+  let html='';
+  blocks.forEach(([key,label,ic])=>{
+    const arr=LIVE[key]||[];
+    html+='<div class="rankblock"><h4>'+ic+' '+label+'</h4>';
+    if(!arr.length){html+='<div class="rankrow empty">—</div>';}
+    else arr.slice(0,10).forEach(r=>{
+      html+='<div class="rankrow"><span class="rp">'+r.pos+'</span><span class="rnm">'+r.nombre+
+        '<small>'+(r.equipo||'')+'</small></span><span class="rv">'+(r.valor||'')+'</span></div>';
+    });
+    html+='</div>';
+  });
+  return html;
 }
 document.getElementById('teamsbtn').onclick=()=>{
   const p=document.getElementById('teamspanel');
-  if(!p.innerHTML)buildTeamsPanel();
+  buildTeamsPanel();
   p.classList.toggle('open');
   document.getElementById('climbspanel').classList.remove('open');
 };
@@ -1077,6 +1145,7 @@ map.on('load',()=>{
   const today=DATA.stages.find(s=>s.date===iso);
   const initial=today?today.number:0;
   sel.value=initial; loadStage(initial);
+  loadLive(); // carga abandonos y clasificaciones del repo (si existen)
 });
 map.on('error',()=>{});
 </script>
