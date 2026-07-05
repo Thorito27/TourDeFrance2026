@@ -282,6 +282,8 @@
   .rankrow .rv{font:600 12px Oswald;color:#eef2f7}
   .rankrow.empty{color:var(--muted)}
   .norank{padding:14px 6px;color:var(--muted);font:500 12px/1.5 Inter;text-align:center}
+  .rankdiv{margin:4px 2px 9px;padding-top:9px;border-top:1px solid var(--panel-line);
+    font:700 10px/1.2 Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
   @media (prefers-reduced-motion:reduce){ .btn{transition:none} }
 </style>
 </head>
@@ -1234,7 +1236,7 @@ function goStage(n){document.getElementById('stage').value=n;loadStage(n);}
 /* ===== Panel de equipos ===== */
 /* ===== Datos en vivo (abandonos + clasificaciones) desde datos-vivos.json =====
    Se editan en el repo tras cada etapa. Fallback a localStorage para marcado manual local. */
-let LIVE={abandonos:[],general:[],puntos:[],montana:[],jovenes:[],maillots:{},ganadores_etapa:{},actualizado:''};
+let LIVE={abandonos:[],general:[],puntos:[],montana:[],jovenes:[],maillots:{},ganadores_etapa:{},resultados_etapa:{},actualizado:''};
 let DNF=new Set();          // nombres de corredores retirados (desde JSON)
 let DNF_LOCAL=new Set();    // marcados a mano en este navegador (se suman a los del JSON)
 try{const s=localStorage.getItem('tdf26dnf_local');if(s)DNF_LOCAL=new Set(JSON.parse(s));}catch(e){}
@@ -1307,20 +1309,38 @@ function maillotOf(name){
   if(m.lunares===name)return 'j-pois'; if(m.blanco===name)return 'j-wht'; return '';
 }
 function rankingsHTML(){
-  const blocks=[['general','General','⏱'],['puntos','Puntos','🟢'],['montana','Montaña','⛰'],['jovenes','Jóvenes','⚪']];
-  let any=(LIVE.general&&LIVE.general.length)||(LIVE.puntos&&LIVE.puntos.length)||(LIVE.montana&&LIVE.montana.length)||(LIVE.jovenes&&LIVE.jovenes.length);
-  if(!any)return '<div class="norank">Aún no hay clasificaciones cargadas.<br>Se mostrarán aquí cuando arranque la carrera y actualices el archivo de datos.</div>';
   let html='';
-  blocks.forEach(([key,label,ic])=>{
-    const arr=LIVE[key]||[];
-    html+='<div class="rankblock"><h4>'+ic+' '+label+'</h4>';
-    if(!arr.length){html+='<div class="rankrow empty">—</div>';}
-    else arr.slice(0,10).forEach(r=>{
-      html+='<div class="rankrow"><span class="rp">'+r.pos+'</span><span class="rnm">'+r.nombre+
-        '<small>'+(r.equipo||'')+'</small></span><span class="rv">'+(r.valor||'')+'</span></div>';
+  // --- Resultado de la etapa actualmente seleccionada (con tiempos) ---
+  if(stage&&stage.number){
+    const res=(LIVE.resultados_etapa&&LIVE.resultados_etapa[stage.number])||[];
+    html+='<div class="rankblock"><h4>🏁 Resultado · Etapa '+stage.number+'</h4>';
+    if(!res.length){
+      html+='<div class="rankrow empty">Aún no disputada o sin resultados cargados.</div>';
+    }else{
+      res.slice(0,15).forEach(r=>{
+        html+='<div class="rankrow"><span class="rp">'+r.pos+'</span><span class="rnm">'+r.nombre+
+          '<small>'+(r.equipo||'')+'</small></span><span class="rv">'+(r.tiempo||r.valor||'')+'</span></div>';
+      });
+    }
+    html+='</div><div class="rankdiv">Clasificación general (tras la última etapa)</div>';
+  }
+  // --- Clasificaciones generales/actuales (cambian cada día) ---
+  const blocks=[['general','General','⏱'],['puntos','Puntos','🟢'],['montana','Montaña','⛰'],['jovenes','Jóvenes','⚪']];
+  const anyGlobal=blocks.some(([k])=>(LIVE[k]||[]).length);
+  if(!anyGlobal){
+    html+='<div class="norank">La clasificación general aparecerá aquí cuando arranque la carrera y actualices el archivo de datos.</div>';
+  }else{
+    blocks.forEach(([key,label,ic])=>{
+      const arr=LIVE[key]||[];
+      html+='<div class="rankblock"><h4>'+ic+' '+label+'</h4>';
+      if(!arr.length){html+='<div class="rankrow empty">—</div>';}
+      else arr.slice(0,10).forEach(r=>{
+        html+='<div class="rankrow"><span class="rp">'+r.pos+'</span><span class="rnm">'+r.nombre+
+          '<small>'+(r.equipo||'')+'</small></span><span class="rv">'+(r.valor||'')+'</span></div>';
+      });
+      html+='</div>';
     });
-    html+='</div>';
-  });
+  }
   return html;
 }
 document.getElementById('teamsbtn').onclick=()=>{
@@ -1346,6 +1366,13 @@ function loadStage(n){
   document.getElementById('peakcard').classList.remove('show');
   drawProfile(); buildClimbsPanel(); dist=0; pause(); moveRider(0); renderCard(); overview();
   const mp=document.getElementById('meteopanel'); if(mp&&mp.classList.contains('open'))buildMeteoPanel();
+  // si el panel de equipos está abierto, reconstruirlo para refrescar el resultado de la etapa (conservando pestaña)
+  const tp=document.getElementById('teamspanel');
+  if(tp&&tp.classList.contains('open')){
+    const on=tp.querySelector('.tab.on'), wasClasif=on&&on.dataset.tab==='clasif';
+    buildTeamsPanel();
+    if(wasClasif){const t=tp.querySelector('.tab[data-tab="clasif"]'); if(t)t.click();}
+  }
 }
 
 map.on('load',()=>{
