@@ -60,6 +60,17 @@
     border-radius:8px;padding:8px 30px 8px 11px;font:600 13px/1 Inter;cursor:pointer;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='%239aa4b0' d='M0 0l5 7 5-7z'/%3E%3C/svg%3E");
     background-repeat:no-repeat;background-position:right 11px center}
+  .todaybtn{position:absolute;top:calc(14px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+    z-index:7;height:38px;padding:0 16px;border-radius:999px;cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px;background:var(--jaune);color:#111;border:1px solid transparent;
+    font:700 13px/1 Inter;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+  .todaybtn:hover{filter:brightness(1.06)}
+  .todaybtn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .todaytoast{position:absolute;top:calc(58px + env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-4px);
+    z-index:7;padding:6px 12px;border-radius:999px;pointer-events:none;white-space:nowrap;
+    background:rgba(10,14,20,.85);border:1px solid var(--panel-line);backdrop-filter:blur(8px);
+    color:var(--text);font:600 11px/1 Inter;opacity:0;transition:opacity .25s,transform .25s}
+  .todaytoast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
   .flag{transform:translateY(-50%);display:flex;align-items:center;gap:6px;padding:3px 7px 3px 3px;border-radius:8px;
     background:rgba(10,14,20,.78);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(4px);
@@ -109,6 +120,9 @@
   .attrib{position:absolute;right:8px;bottom:2px;z-index:6;font:400 10px/1 Inter;color:rgba(255,255,255,.4)}
   @media (max-width:640px){
     .card{top:10px;left:10px;padding:11px 13px;max-width:60vw}
+    .todaybtn{left:auto;right:14px;transform:none;top:calc(104px + env(safe-area-inset-top));height:32px;padding:0 12px;font-size:12px}
+    .todaytoast{left:auto;right:14px;top:calc(142px + env(safe-area-inset-top));transform:translateY(-4px)}
+    .todaytoast.show{transform:translateY(0)}
     .card .num b{font-size:32px}
     .readout{display:none}
     .btn span.lbl{display:none}
@@ -281,6 +295,8 @@
   <select id="stage" aria-label="Seleccionar etapa"></select>
 </div>
 <button class="teamsbtn" id="teamsbtn" title="Equipos y corredores">👥 Equipos</button>
+<button class="todaybtn" id="todaybtn" title="Ir a la etapa de hoy">📍 Hoy</button>
+<div class="todaytoast" id="todaytoast" role="status" aria-live="polite"></div>
 <div class="teamspanel" id="teamspanel"></div>
 <div class="peakcard" id="peakcard"></div>
 <div class="keyhint">⌨ ← → girar · ↑ ↓ inclinar</div>
@@ -872,6 +888,37 @@ function updateCountdown(){
   el.textContent=(mins<60)?('Sale en '+mins+' min'):('Sale en '+Math.floor(mins/60)+'h '+(mins%60)+'min');
   el.style.display='';
 }
+/* Botón "Hoy": salta a la etapa cuya fecha coincida con hoy. Usa la fecha LOCAL del sistema
+   (sin conversión de zona) y se recalcula en cada pulsación/carga leyendo new Date() en vivo,
+   así que "se actualiza solo" cada día sin ninguna tarea periódica. */
+function localTodayIso(){
+  const n=new Date();
+  return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+}
+function todayStageNumber(){
+  const s=DATA.stages.find(x=>x.date===localTodayIso());
+  return s?s.number:0; // 0 = vista general si hoy no hay etapa
+}
+let _todayToastTimer=null;
+function showTodayToast(msg){
+  const t=document.getElementById('todaytoast'); if(!t)return;
+  t.textContent=msg; t.classList.add('show');
+  if(_todayToastTimer)clearTimeout(_todayToastTimer);
+  _todayToastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+}
+function goToday(){
+  const iso=localTodayIso();
+  const s=DATA.stages.find(x=>x.date===iso);
+  const n=s?s.number:0;
+  const sel=document.getElementById('stage'); if(sel)sel.value=n;
+  loadStage(n); // misma función que usa el selector de etapa
+  if(!s){
+    const dates=DATA.stages.map(x=>x.date).sort();
+    const within=iso>dates[0]&&iso<dates[dates.length-1];
+    showTodayToast(within?'Hoy es día de descanso':'Hoy no hay etapa');
+  }
+}
+document.getElementById('todaybtn').onclick=goToday;
 /* Ocultar/mostrar la gráfica de perfil (con preferencia persistente).
    Usa max-height/opacity (no display:none) para que drawProfile/updateProfile
    sigan midiendo el SVG y dibujando aunque el perfil esté oculto. */
@@ -1332,10 +1379,8 @@ map.on('load',()=>{
   if(pEtapa!==null && /^\d+$/.test(pEtapa.trim()) && (+pEtapa===0 || DATA.stages.some(s=>s.number===+pEtapa))){
     initial=+pEtapa;
   }else{
-    // durante la carrera, abre directamente la etapa del día
-    const iso=new Date().toISOString().slice(0,10);
-    const today=DATA.stages.find(s=>s.date===iso);
-    initial=today?today.number:0;
+    // sin ?etapa= en la URL: abre directamente la etapa de hoy (fecha local), o vista general si no hay
+    initial=todayStageNumber();
   }
   sel.value=initial; loadStage(initial);
   loadLive(); // carga abandonos y clasificaciones del repo (si existen)
