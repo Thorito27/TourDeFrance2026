@@ -780,10 +780,10 @@ function baseMps(){return TOTAL/360;} // ~6 min por etapa a 1x, sea cual sea su 
 
 /* ===== Modo cinematográfico de "Recorrer": la ruta se dibuja en vivo =====
    Al reproducir se oculta el trazado completo (y la bici) y una línea amarilla
-   va naciendo desde la salida, con cámara propia: picada, pegada a la punta y
-   girando suave con la dirección de la carretera. Al pausar o llegar a meta se
-   restauran el trazado coloreado y el marcador. */
-let cinema=false,camBrg=null;
+   va naciendo desde la salida. La cámara NO se toca: el mapa queda libre para
+   que el usuario lo mueva mientras el dibujo avanza. Al pausar o llegar a meta
+   se restauran el trazado coloreado y el marcador. */
+let cinema=false;
 function ensureProgressLayers(){
   if(map.getSource('progress'))return;
   map.addSource('progress',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:[]}}});
@@ -802,8 +802,6 @@ function progressCoords(d){
   cs.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);
   return cs;
 }
-function cinemaZoom(){return Math.max(11.5,Math.min(13.5,19.3-0.42*Math.log2(TOTAL||1)));}
-function lerpAngle(a,b,k){const d=((b-a+540)%360)-180;return (a+d*k+360)%360;}
 function enterCinema(){
   if(cinema)return; cinema=true; ensureProgressLayers();
   ['route-glow','route-color','rider-glow'].forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','none');});
@@ -812,8 +810,6 @@ function enterCinema(){
   const cs=progressCoords(dist);
   map.getSource('progress').setData({type:'Feature',geometry:{type:'LineString',coordinates:cs}});
   map.getSource('progresstip').setData({type:'Feature',geometry:{type:'Point',coordinates:cs[cs.length-1]}});
-  const {p,brg}=pointAt(dist); camBrg=brg;
-  map.easeTo({center:p,zoom:cinemaZoom(),pitch:62,bearing:brg,duration:1100});
 }
 function exitCinema(){
   if(!cinema)return; cinema=false;
@@ -825,9 +821,6 @@ function cinemaFrame(){
   const cs=progressCoords(dist),tip=cs[cs.length-1];
   map.getSource('progress').setData({type:'Feature',geometry:{type:'LineString',coordinates:cs}});
   map.getSource('progresstip').setData({type:'Feature',geometry:{type:'Point',coordinates:tip}});
-  const {brg}=pointAt(dist);
-  camBrg=lerpAngle(camBrg==null?brg:camBrg,brg,0.045); // giro suave, sin bandazos
-  map.jumpTo({center:tip,bearing:camBrg});
 }
 function frame(ts){
   if(!playing)return; if(!last)last=ts;
@@ -836,7 +829,7 @@ function frame(ts){
   if(done){dist=TOTAL;playing=false;document.getElementById('play').innerHTML='▶ Recorrer';}
   moveRider(dist); // actualiza HUD y perfil (el marcador va oculto en modo cine)
   if(cinema)cinemaFrame();
-  if(done){exitCinema();overview();return;} // final: se revela el trazado completo
+  if(done){exitCinema();return;} // final: se revela el trazado completo (sin mover la cámara)
   if(playing)requestAnimationFrame(frame);
 }
 function play(){
