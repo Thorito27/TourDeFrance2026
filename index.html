@@ -652,6 +652,8 @@ function buildSegFC(){
 function setRouteSources(){
   const gj={type:'Feature',geometry:{type:'LineString',coordinates:COORDS.map(c=>[c[0],c[1]])}};
   const seg=buildSegFC();
+  // al cambiar de etapa, vaciar la línea del modo cine para que no quede la anterior
+  if(map.getSource('progress'))map.getSource('progress').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
   if(map.getSource('route')){map.getSource('route').setData(gj);map.getSource('routeseg').setData(seg);}
   else{
     map.addSource('route',{type:'geojson',data:gj});
@@ -775,15 +777,75 @@ map.on('click', clickToRoute);
 /* flythrough */
 let playing=false,dist=0,speed=1,last=0;
 function baseMps(){return TOTAL/360;} // ~6 min por etapa a 1x, sea cual sea su longitud
+
+/* ===== Modo cinematográfico de "Recorrer": la ruta se dibuja en vivo =====
+   Al reproducir se oculta el trazado completo (y la bici) y una línea amarilla
+   va naciendo desde la salida, con cámara propia: picada, pegada a la punta y
+   girando suave con la dirección de la carretera. Al pausar o llegar a meta se
+   restauran el trazado coloreado y el marcador. */
+let cinema=false,camBrg=null;
+function ensureProgressLayers(){
+  if(map.getSource('progress'))return;
+  map.addSource('progress',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:[]}}});
+  map.addLayer({id:'progress-glow',type:'line',source:'progress',layout:{'line-cap':'round','line-join':'round'},
+    paint:{'line-color':'#FFD400','line-width':11,'line-opacity':.25,'line-blur':4}});
+  map.addLayer({id:'progress-line',type:'line',source:'progress',layout:{'line-cap':'round','line-join':'round'},
+    paint:{'line-color':'#FFD400','line-width':4.5}});
+  map.addSource('progresstip',{type:'geojson',data:{type:'Feature',geometry:{type:'Point',coordinates:[0,0]}}});
+  map.addLayer({id:'progress-tip',type:'circle',source:'progresstip',
+    paint:{'circle-radius':6,'circle-color':'#fff','circle-stroke-color':'#FFD400','circle-stroke-width':3}});
+}
+function progressCoords(d){
+  let lo=0,hi=CUM.length-1;while(lo<hi){const m=(lo+hi)>>1;if(CUM[m]<d)lo=m+1;else hi=m;}
+  const i=Math.max(1,lo),t=(d-CUM[i-1])/((CUM[i]-CUM[i-1])||1),a=COORDS[i-1],b=COORDS[i];
+  const cs=COORDS.slice(0,i).map(c=>[c[0],c[1]]);
+  cs.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);
+  return cs;
+}
+function cinemaZoom(){return Math.max(11.5,Math.min(13.5,19.3-0.42*Math.log2(TOTAL||1)));}
+function lerpAngle(a,b,k){const d=((b-a+540)%360)-180;return (a+d*k+360)%360;}
+function enterCinema(){
+  if(cinema)return; cinema=true; ensureProgressLayers();
+  ['route-glow','route-color','rider-glow'].forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','none');});
+  ['progress-glow','progress-line','progress-tip'].forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','visible');});
+  if(riderMarker)riderMarker.getElement().style.display='none';
+  const cs=progressCoords(dist);
+  map.getSource('progress').setData({type:'Feature',geometry:{type:'LineString',coordinates:cs}});
+  map.getSource('progresstip').setData({type:'Feature',geometry:{type:'Point',coordinates:cs[cs.length-1]}});
+  const {p,brg}=pointAt(dist); camBrg=brg;
+  map.easeTo({center:p,zoom:cinemaZoom(),pitch:62,bearing:brg,duration:1100});
+}
+function exitCinema(){
+  if(!cinema)return; cinema=false;
+  ['progress-glow','progress-line','progress-tip'].forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','none');});
+  ['route-glow','route-color','rider-glow'].forEach(id=>{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','visible');});
+  if(riderMarker)riderMarker.getElement().style.display='';
+}
+function cinemaFrame(){
+  const cs=progressCoords(dist),tip=cs[cs.length-1];
+  map.getSource('progress').setData({type:'Feature',geometry:{type:'LineString',coordinates:cs}});
+  map.getSource('progresstip').setData({type:'Feature',geometry:{type:'Point',coordinates:tip}});
+  const {brg}=pointAt(dist);
+  camBrg=lerpAngle(camBrg==null?brg:camBrg,brg,0.045); // giro suave, sin bandazos
+  map.jumpTo({center:tip,bearing:camBrg});
+}
 function frame(ts){
   if(!playing)return; if(!last)last=ts;
   const dt=(ts-last)/1000;last=ts; dist+=baseMps()*speed*dt;
-  if(dist>=TOTAL){dist=TOTAL;playing=false;document.getElementById('play').innerHTML='▶ Recorrer';}
-  moveRider(dist); // solo mueve el marcador; el encuadre lo controlas tú
+  const done=dist>=TOTAL;
+  if(done){dist=TOTAL;playing=false;document.getElementById('play').innerHTML='▶ Recorrer';}
+  moveRider(dist); // actualiza HUD y perfil (el marcador va oculto en modo cine)
+  if(cinema)cinemaFrame();
+  if(done){exitCinema();overview();return;} // final: se revela el trazado completo
   if(playing)requestAnimationFrame(frame);
 }
-function play(){if(dist>=TOTAL)dist=0;playing=true;last=0;document.getElementById('play').innerHTML='⏸ Pausa';requestAnimationFrame(frame);}
-function pause(){playing=false;document.getElementById('play').innerHTML='▶ Recorrer';}
+function play(){
+  if(dist>=TOTAL)dist=0;
+  playing=true;last=0;document.getElementById('play').innerHTML='⏸ Pausa';
+  enterCinema();
+  requestAnimationFrame(frame);
+}
+function pause(){playing=false;document.getElementById('play').innerHTML='▶ Recorrer';exitCinema();}
 function overview(){
   const lngs=COORDS.map(c=>c[0]),lats=COORDS.map(c=>c[1]);
   map.fitBounds([[Math.min(...lngs),Math.min(...lats)],[Math.max(...lngs),Math.max(...lats)]],
