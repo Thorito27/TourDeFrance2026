@@ -336,7 +336,7 @@
   <div class="row"><span class="sw" style="width:12px;height:12px;border-radius:50%;background:#111;border:2px solid #fff"></span>Meta</div>
 </div>
 <div class="ovcard" id="ovcard"></div>
-<div class="attrib">GPX oficial · Satélite: Esri · Relieve: AWS · Edificios: OpenFreeMap/OSM · MapLibre · Datos meteo: Open-Meteo.com</div>
+<div class="attrib">GPX oficial · Satélite, carreteras y topónimos: Esri · Relieve: AWS · Edificios: OpenFreeMap/OSM · MapLibre · Datos meteo: Open-Meteo.com</div>
 <div class="loading" id="loading">Cargando terreno…</div>
 
 <script>
@@ -359,10 +359,10 @@ if(typeof maplibregl==='undefined') showFail();
 
 const DEM='https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
 const map=new maplibregl.Map({
-  container:'map',center:[2.1,41.4],zoom:9,pitch:64,bearing:-18,maxPitch:80,
+  container:'map',center:[2.1,41.4],zoom:9,pitch:64,bearing:-18,maxPitch:85,
   attributionControl:false,antialias:true,
   style:{version:8,glyphs:'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
-    sources:{dem:{type:'raster-dem',tiles:[DEM],encoding:'terrarium',tileSize:256,maxzoom:14}},
+    sources:{dem:{type:'raster-dem',tiles:[DEM],encoding:'terrarium',tileSize:256,maxzoom:15}},
     layers:[
       {id:'bg',type:'background',paint:{'background-color':'#1a2029'}},
       {id:'hills',type:'hillshade',source:'dem',
@@ -390,19 +390,55 @@ document.addEventListener('keydown',e=>{
   }
   if(used)e.preventDefault();
 });
-/* Imagen satélite (ESRI World Imagery) como vista única y predeterminada, con relieve sutil encima */
+/* Imagen satélite (ESRI World Imagery) como vista única y predeterminada, con relieve sutil encima.
+   Encima, dos capas de referencia de Esri que convierten el satélite en un HÍBRIDO real:
+   carreteras (World_Transportation) y topónimos (World_Boundaries_and_Places), con
+   opacidad progresiva según el zoom para no ensuciar la vista lejana. */
 function ensureSat(){
   if(map.getSource('sat'))return;
   map.addSource('sat',{type:'raster',tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
     tileSize:256,maxzoom:19,attribution:'Esri'});
   map.addLayer({id:'sat',type:'raster',source:'sat',
-    paint:{'raster-opacity':1,'raster-saturation':-.12,'raster-brightness-max':.95}},'hills');
+    paint:{'raster-opacity':1,'raster-saturation':-.05,'raster-contrast':.06,
+           'raster-brightness-max':.98,'raster-fade-duration':150}},'hills');
   const lys=map.getStyle().layers, hi=lys.findIndex(l=>l.id==='hills');
   const beforeId=(hi>=0&&lys[hi+1])?lys[hi+1].id:undefined;
   map.addLayer({id:'satshade',type:'hillshade',source:'dem',
     paint:{'hillshade-shadow-color':'rgba(6,9,14,.7)','hillshade-highlight-color':'rgba(255,255,255,.12)',
            'hillshade-accent-color':'rgba(10,14,20,.35)','hillshade-exaggeration':.5}},beforeId);
   map.setLayoutProperty('hills','visibility','none'); // el relieve gris base queda oculto bajo el satélite
+  // carreteras: van apareciendo al acercarse
+  map.addSource('esriroads',{type:'raster',tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}'],
+    tileSize:256,maxzoom:19,attribution:'Esri'});
+  map.addLayer({id:'esriroads',type:'raster',source:'esriroads',
+    paint:{'raster-opacity':['interpolate',['linear'],['zoom'],8,0,10.5,.55,13,.85]}});
+  // topónimos: visibles ya en vista media, se atenúan muy de cerca
+  map.addSource('esriplaces',{type:'raster',tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+    tileSize:256,maxzoom:19,attribution:'Esri'});
+  map.addLayer({id:'esriplaces',type:'raster',source:'esriplaces',
+    paint:{'raster-opacity':['interpolate',['linear'],['zoom'],5,0,7,.9,13,.95,16,.6]}});
+}
+/* Iluminación dinámica: el sombreado del relieve, el cielo y la luz de los edificios
+   siguen la hora local real (amanecer → día → atardecer → noche). */
+function sunTune(){
+  try{
+    const n=new Date(),h=n.getHours()+n.getMinutes()/60;
+    const day=h>=6&&h<21.5, golden=(h>=6&&h<8.5)||(h>=19&&h<21.5);
+    const dir=day?Math.max(70,Math.min(290,90+(h-6)*180/15)):335; // este→sur→oeste
+    const sky=!day?{sky:'#0b1522',hor:'#28394e',fog:'#131b26'}
+      :golden?{sky:'#25344e',hor:'#d08a4b',fog:'#2b2732'}
+      :{sky:'#8fb8e6',hor:'#e8eef5',fog:'#bac7d5'};
+    ['satshade','hills'].forEach(id=>{if(map.getLayer(id)){
+      map.setPaintProperty(id,'hillshade-illumination-anchor','map'); // el sol no gira con la cámara
+      map.setPaintProperty(id,'hillshade-illumination-direction',dir);
+    }});
+    if(map.getLayer('satshade'))
+      map.setPaintProperty('satshade','hillshade-shadow-color',golden?'rgba(32,15,8,.65)':'rgba(6,9,14,.7)');
+    map.setSky({'sky-color':sky.sky,'horizon-color':sky.hor,'fog-color':sky.fog,
+      'fog-ground-blend':day?.45:.55,'horizon-fog-blend':.6,'sky-horizon-blend':.75,
+      'atmosphere-blend':['interpolate',['linear'],['zoom'],4,.35,10,.12,14,0]});
+    map.setLight({anchor:'map',position:[1.3,dir,day?(golden?70:35):80],intensity:day?(golden?.45:.3):.15});
+  }catch(e){/* versiones sin setSky/setLight: se ignora */}
 }
 
 const R=6371000,rad=d=>d*Math.PI/180;
@@ -658,10 +694,10 @@ function setRouteSources(){
   else{
     map.addSource('route',{type:'geojson',data:gj});
     map.addLayer({id:'route-glow',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},
-      paint:{'line-color':'#FFD400','line-width':8,'line-opacity':.20,'line-blur':3}});
+      paint:{'line-color':'#FFD400','line-width':['interpolate',['linear'],['zoom'],8,5,12,8,16,13],'line-opacity':.20,'line-blur':3}});
     map.addSource('routeseg',{type:'geojson',data:seg});
     map.addLayer({id:'route-color',type:'line',source:'routeseg',layout:{'line-cap':'round','line-join':'round'},
-      paint:{'line-width':4,'line-color':['step',['get','g'],'#F2D024',2,'#F5A623',5,'#E4032E',8,'#B01030',12,'#1a1a1a']}});
+      paint:{'line-width':['interpolate',['linear'],['zoom'],8,2.4,12,4,16,6.5],'line-color':['step',['get','g'],'#F2D024',2,'#F5A623',5,'#E4032E',8,'#B01030',12,'#1a1a1a']}});
     map.addSource('rider',{type:'geojson',data:{type:'Feature',geometry:{type:'Point',coordinates:[COORDS[0][0],COORDS[0][1]]}}});
     map.addLayer({id:'rider-glow',type:'circle',source:'rider',paint:{'circle-radius':14,'circle-color':'#FFD400','circle-opacity':.28,'circle-blur':1}});
     if(!riderMarker){
@@ -788,12 +824,12 @@ function ensureProgressLayers(){
   if(map.getSource('progress'))return;
   map.addSource('progress',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:[]}}});
   map.addLayer({id:'progress-glow',type:'line',source:'progress',layout:{'line-cap':'round','line-join':'round'},
-    paint:{'line-color':'#FFD400','line-width':11,'line-opacity':.25,'line-blur':4}});
+    paint:{'line-color':'#FFD400','line-width':['interpolate',['linear'],['zoom'],8,6,12,11,16,16],'line-opacity':.25,'line-blur':4}});
   map.addLayer({id:'progress-line',type:'line',source:'progress',layout:{'line-cap':'round','line-join':'round'},
-    paint:{'line-color':'#FFD400','line-width':4.5}});
+    paint:{'line-color':'#FFD400','line-width':['interpolate',['linear'],['zoom'],8,2.8,12,4.5,16,7]}});
   map.addSource('progresstip',{type:'geojson',data:{type:'Feature',geometry:{type:'Point',coordinates:[0,0]}}});
   map.addLayer({id:'progress-tip',type:'circle',source:'progresstip',
-    paint:{'circle-radius':6,'circle-color':'#fff','circle-stroke-color':'#FFD400','circle-stroke-width':3}});
+    paint:{'circle-radius':['interpolate',['linear'],['zoom'],8,4,12,6,16,8],'circle-color':'#fff','circle-stroke-color':'#FFD400','circle-stroke-width':3}});
 }
 function progressCoords(d){
   let lo=0,hi=CUM.length-1;while(lo<hi){const m=(lo+hi)>>1;if(CUM[m]<d)lo=m+1;else hi=m;}
@@ -1432,6 +1468,7 @@ function loadStage(n){
 
 map.on('load',()=>{
   ensureSat(); // vista satélite predeterminada
+  sunTune(); setInterval(sunTune,300000); // luz/cielo según la hora del día
   // edificios 3D (fuente vectorial gratuita, sin clave)
   try{
     map.addSource('ofm',{type:'vector',url:'https://tiles.openfreemap.org/planet'});
