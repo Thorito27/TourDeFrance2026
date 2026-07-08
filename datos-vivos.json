@@ -1,7 +1,7 @@
 {
   "_INSTRUCCIONES": "Edita este archivo tras cada etapa y haz commit. El visor lo lee al abrirse. NO borres las comillas ni las comas. Fecha de última actualización abajo.",
-  "actualizado": "2026-07-07",
-  "ultima_etapa": 4,
+  "actualizado": "2026-07-08",
+  "ultima_etapa": 5,
   "_ayuda_abandonos": "Lista de corredores que han abandonado. Escribe el nombre EXACTO como aparece en el visor (panel Equipos). Añade una línea por cada uno, separadas por comas.",
   "abandonos": [],
   "_ayuda_clasificaciones": "Top de cada clasificación tras la última etapa. Deja las listas vacías [] si aún no ha empezado la carrera. Formato de cada línea: {\"pos\":1,\"nombre\":\"...\",\"equipo\":\"...\",\"valor\":\"...\"}. En 'general' valor es el tiempo (ej '52:30:14' o '+0:00'); en 'puntos' y 'montana' es el número de puntos; en 'jovenes' el tiempo.",
@@ -10,7 +10,7 @@
       "pos": 1,
       "nombre": "Torstein Træen",
       "equipo": "Uno-X Mobility",
-      "valor": "13:02:46"
+      "valor": "16:32:07"
     },
     {
       "pos": 2,
@@ -72,19 +72,19 @@
       "pos": 1,
       "nombre": "Mads Pedersen",
       "equipo": "Lidl-Trek",
-      "valor": "103 pts"
+      "valor": "143 pts"
     },
     {
       "pos": 2,
-      "nombre": "Tadej Pogačar",
-      "equipo": "UAE Emirates-XRG",
-      "valor": "55 pts"
+      "nombre": "Biniam Girmay",
+      "equipo": "NSN Cycling",
+      "valor": "79 pts"
     },
     {
       "pos": 3,
-      "nombre": "Jonas Vingegaard",
-      "equipo": "Visma-Lease a Bike",
-      "valor": "44 pts"
+      "nombre": "Max Kanter",
+      "equipo": "XDS Astana",
+      "valor": "77 pts"
     }
   ],
   "montana": [
@@ -92,7 +92,7 @@
       "pos": 1,
       "nombre": "Alex Baudin",
       "equipo": "EF Education-EasyPost",
-      "valor": "12 pts"
+      "valor": "13 pts"
     },
     {
       "pos": 2,
@@ -139,7 +139,8 @@
     "1": "Visma-Lease a Bike",
     "2": "Isaac del Toro",
     "3": "Tadej Pogačar",
-    "4": "Mads Pedersen"
+    "4": "Mads Pedersen",
+    "5": "Olav Kooij"
   },
   "_ayuda_resultados_etapa": "Resultado (top) de CADA etapa ya disputada, con tiempos. Clave = número de etapa (texto). Cada corredor: {\"pos\":1,\"nombre\":\"...\",\"equipo\":\"...\",\"tiempo\":\"...\"}. El 1º lleva el tiempo total (ej '4:12:33') y el resto la diferencia (ej '+0:14', o 'm.t.' si es el mismo tiempo). Deja {} mientras no haya nada; añade una etapa cuando se dispute. La clasificación GENERAL (que cambia cada día) va arriba en 'general'.",
   "resultados_etapa": {
@@ -346,6 +347,68 @@
         "pos": 10,
         "nombre": "Mathias Vacek",
         "equipo": "Lidl-Trek",
+        "tiempo": "m.t."
+      }
+    ],
+    "5": [
+      {
+        "pos": 1,
+        "nombre": "Olav Kooij",
+        "equipo": "Decathlon-CMA CGM",
+        "tiempo": "3:29:21"
+      },
+      {
+        "pos": 2,
+        "nombre": "Max Kanter",
+        "equipo": "XDS Astana",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 3,
+        "nombre": "Tim Merlier",
+        "equipo": "Soudal Quick-Step",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 4,
+        "nombre": "Huub Artz",
+        "equipo": "Intermarché-Lotto",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 5,
+        "nombre": "Jasper Philipsen",
+        "equipo": "Alpecin-Premier Tech",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 6,
+        "nombre": "Biniam Girmay",
+        "equipo": "NSN Cycling",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 7,
+        "nombre": "Mads Pedersen",
+        "equipo": "Lidl-Trek",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 8,
+        "nombre": "Milan Fretin",
+        "equipo": "Cofidis",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 9,
+        "nombre": "Anthony Turgis",
+        "equipo": "TotalEnergies",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 10,
+        "nombre": "Søren Wærenskjold",
+        "equipo": "Uno-X Mobility",
         "tiempo": "m.t."
       }
     ]
