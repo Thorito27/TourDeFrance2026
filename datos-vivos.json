@@ -1,70 +1,74 @@
 {
   "_INSTRUCCIONES": "Edita este archivo tras cada etapa y haz commit. El visor lo lee al abrirse. NO borres las comillas ni las comas. Fecha de última actualización abajo.",
-  "actualizado": "2026-07-09",
-  "ultima_etapa": 6,
+  "actualizado": "2026-07-15",
+  "ultima_etapa": 10,
   "_ayuda_abandonos": "Lista de corredores que han abandonado. Escribe el nombre EXACTO como aparece en el visor (panel Equipos). Añade una línea por cada uno, separadas por comas.",
-  "abandonos": [],
+  "abandonos": [
+    "Torstein Træen",
+    "Matteo Trentin",
+    "Chris Harper"
+  ],
   "_ayuda_clasificaciones": "Top de cada clasificación tras la última etapa. Deja las listas vacías [] si aún no ha empezado la carrera. Formato de cada línea: {\"pos\":1,\"nombre\":\"...\",\"equipo\":\"...\",\"valor\":\"...\"}. En 'general' valor es el tiempo (ej '52:30:14' o '+0:00'); en 'puntos' y 'montana' es el número de puntos; en 'jovenes' el tiempo.",
   "general": [
     {
       "pos": 1,
       "nombre": "Tadej Pogačar",
       "equipo": "UAE Emirates-XRG",
-      "valor": "21:11:57"
+      "valor": "36:15:02"
     },
     {
       "pos": 2,
       "nombre": "Jonas Vingegaard",
       "equipo": "Visma-Lease a Bike",
-      "valor": "+2:42"
+      "valor": "+3:36"
     },
     {
       "pos": 3,
-      "nombre": "Isaac del Toro",
-      "equipo": "UAE Emirates-XRG",
-      "valor": "+3:27"
+      "nombre": "Remco Evenepoel",
+      "equipo": "Red Bull-BORA-hansgrohe",
+      "valor": "+4:06"
     },
     {
       "pos": 4,
-      "nombre": "Remco Evenepoel",
-      "equipo": "Red Bull-BORA-hansgrohe",
-      "valor": "+3:30"
+      "nombre": "Juan Ayuso",
+      "equipo": "Lidl-Trek",
+      "valor": "+4:22"
     },
     {
       "pos": 5,
-      "nombre": "Juan Ayuso",
-      "equipo": "Lidl-Trek",
-      "valor": "+3:34"
+      "nombre": "Paul Seixas",
+      "equipo": "Decathlon-CMA CGM",
+      "valor": "+4:35"
     },
     {
       "pos": 6,
-      "nombre": "Paul Seixas",
-      "equipo": "Decathlon-CMA CGM",
-      "valor": "+3:55"
+      "nombre": "Florian Lipowitz",
+      "equipo": "Red Bull-BORA-hansgrohe",
+      "valor": "+4:44"
     },
     {
       "pos": 7,
-      "nombre": "Florian Lipowitz",
-      "equipo": "Red Bull-BORA-hansgrohe",
-      "valor": "+4:00"
+      "nombre": "Isaac del Toro",
+      "equipo": "UAE Emirates-XRG",
+      "valor": "+5:08"
     },
     {
       "pos": 8,
-      "nombre": "Lenny Martinez",
-      "equipo": "Bahrain-Victorious",
-      "valor": "+4:21"
+      "nombre": "Mattias Skjelmose",
+      "equipo": "Lidl-Trek",
+      "valor": "+5:45"
     },
     {
       "pos": 9,
-      "nombre": "Mattias Skjelmose",
-      "equipo": "Lidl-Trek",
-      "valor": "+4:57"
+      "nombre": "Lenny Martinez",
+      "equipo": "Bahrain-Victorious",
+      "valor": "+6:34"
     },
     {
       "pos": 10,
-      "nombre": "Mathias Vacek",
-      "equipo": "Lidl-Trek",
-      "valor": "+7:10"
+      "nombre": "Tom Pidcock",
+      "equipo": "Pinarello-Q36.5",
+      "valor": "+11:49"
     }
   ],
   "puntos": [
@@ -72,19 +76,19 @@
       "pos": 1,
       "nombre": "Mads Pedersen",
       "equipo": "Lidl-Trek",
-      "valor": "168 pts"
+      "valor": "293 pts"
     },
     {
       "pos": 2,
       "nombre": "Biniam Girmay",
       "equipo": "NSN Cycling",
-      "valor": "79 pts"
+      "valor": "239 pts"
     },
     {
       "pos": 3,
-      "nombre": "Max Kanter",
-      "equipo": "XDS Astana",
-      "valor": "77 pts"
+      "nombre": "Tim Merlier",
+      "equipo": "Soudal Quick-Step",
+      "valor": "213 pts"
     }
   ],
   "montana": [
@@ -92,39 +96,39 @@
       "pos": 1,
       "nombre": "Tadej Pogačar",
       "equipo": "UAE Emirates-XRG",
-      "valor": "28 pts"
+      "valor": "líder"
     },
     {
       "pos": 2,
       "nombre": "Jonas Vingegaard",
       "equipo": "Visma-Lease a Bike",
-      "valor": "19 pts"
+      "valor": "2.º"
     },
     {
       "pos": 3,
-      "nombre": "Lenny Martinez",
-      "equipo": "Bahrain-Victorious",
-      "valor": "16 pts"
+      "nombre": "Richard Carapaz",
+      "equipo": "EF Education-EasyPost",
+      "valor": "3.º"
     }
   ],
   "jovenes": [
     {
       "pos": 1,
-      "nombre": "Isaac del Toro",
-      "equipo": "UAE Emirates-XRG",
+      "nombre": "Juan Ayuso",
+      "equipo": "Lidl-Trek",
       "valor": "líder"
     },
     {
       "pos": 2,
-      "nombre": "Juan Ayuso",
-      "equipo": "Lidl-Trek",
-      "valor": "+0:07"
+      "nombre": "Paul Seixas",
+      "equipo": "Decathlon-CMA CGM",
+      "valor": "+0:13"
     },
     {
       "pos": 3,
-      "nombre": "Paul Seixas",
-      "equipo": "Decathlon-CMA CGM",
-      "valor": "+0:28"
+      "nombre": "Isaac del Toro",
+      "equipo": "UAE Emirates-XRG",
+      "valor": "+0:46"
     }
   ],
   "_ayuda_maillots": "Portadores actuales de cada maillot (se resaltan en el visor). Nombre exacto o vacío ''.",
@@ -132,7 +136,7 @@
     "amarillo": "Tadej Pogačar",
     "verde": "Mads Pedersen",
     "lunares": "Jonas Vingegaard",
-    "blanco": "Isaac del Toro"
+    "blanco": "Juan Ayuso"
   },
   "_ayuda_ganadores": "Ganador de cada etapa ya disputada. Clave = número de etapa. Ej: \"1\": \"Tadej Pogačar\".",
   "ganadores_etapa": {
@@ -141,7 +145,11 @@
     "3": "Tadej Pogačar",
     "4": "Mads Pedersen",
     "5": "Olav Kooij",
-    "6": "Tadej Pogačar"
+    "6": "Tadej Pogačar",
+    "7": "Tim Merlier",
+    "8": "Tim Merlier",
+    "9": "Mathieu van der Poel",
+    "10": "Tadej Pogačar"
   },
   "_ayuda_resultados_etapa": "Resultado (top) de CADA etapa ya disputada, con tiempos. Clave = número de etapa (texto). Cada corredor: {\"pos\":1,\"nombre\":\"...\",\"equipo\":\"...\",\"tiempo\":\"...\"}. El 1º lleva el tiempo total (ej '4:12:33') y el resto la diferencia (ej '+0:14', o 'm.t.' si es el mismo tiempo). Deja {} mientras no haya nada; añade una etapa cuando se dispute. La clasificación GENERAL (que cambia cada día) va arriba en 'general'.",
   "resultados_etapa": {
@@ -449,6 +457,152 @@
         "nombre": "Egan Bernal",
         "equipo": "Netcompany-INEOS",
         "tiempo": "+4:48"
+      }
+    ],
+    "7": [
+      {
+        "pos": 1,
+        "nombre": "Tim Merlier",
+        "equipo": "Soudal Quick-Step",
+        "tiempo": ""
+      },
+      {
+        "pos": 2,
+        "nombre": "Søren Wærenskjold",
+        "equipo": "Uno-X Mobility",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 3,
+        "nombre": "Biniam Girmay",
+        "equipo": "NSN Cycling",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 4,
+        "nombre": "Max Kanter",
+        "equipo": "XDS Astana",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 5,
+        "nombre": "Jasper Philipsen",
+        "equipo": "Alpecin-Premier Tech",
+        "tiempo": "m.t."
+      }
+    ],
+    "8": [
+      {
+        "pos": 1,
+        "nombre": "Tim Merlier",
+        "equipo": "Soudal Quick-Step",
+        "tiempo": "3:52:50"
+      },
+      {
+        "pos": 2,
+        "nombre": "Biniam Girmay",
+        "equipo": "NSN Cycling",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 3,
+        "nombre": "Olav Kooij",
+        "equipo": "Decathlon-CMA CGM",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 4,
+        "nombre": "Jasper Philipsen",
+        "equipo": "Alpecin-Premier Tech",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 5,
+        "nombre": "Pavel Bittner",
+        "equipo": "Picnic PostNL",
+        "tiempo": "m.t."
+      }
+    ],
+    "9": [
+      {
+        "pos": 1,
+        "nombre": "Mathieu van der Poel",
+        "equipo": "Alpecin-Premier Tech",
+        "tiempo": "3:27:51"
+      },
+      {
+        "pos": 2,
+        "nombre": "Tobias Halland Johannessen",
+        "equipo": "Uno-X Mobility",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 3,
+        "nombre": "Tom Pidcock",
+        "equipo": "Pinarello-Q36.5",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 4,
+        "nombre": "Alex Baudin",
+        "equipo": "EF Education-EasyPost",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 5,
+        "nombre": "Filippo Ganna",
+        "equipo": "Netcompany-INEOS",
+        "tiempo": "+0:06"
+      }
+    ],
+    "10": [
+      {
+        "pos": 1,
+        "nombre": "Tadej Pogačar",
+        "equipo": "UAE Emirates-XRG",
+        "tiempo": "3:58:08"
+      },
+      {
+        "pos": 2,
+        "nombre": "Remco Evenepoel",
+        "equipo": "Red Bull-BORA-hansgrohe",
+        "tiempo": "+0:32"
+      },
+      {
+        "pos": 3,
+        "nombre": "Paul Seixas",
+        "equipo": "Decathlon-CMA CGM",
+        "tiempo": "+0:34"
+      },
+      {
+        "pos": 4,
+        "nombre": "Florian Lipowitz",
+        "equipo": "Red Bull-BORA-hansgrohe",
+        "tiempo": "+0:34"
+      },
+      {
+        "pos": 5,
+        "nombre": "Juan Ayuso",
+        "equipo": "Lidl-Trek",
+        "tiempo": "+0:38"
+      },
+      {
+        "pos": 6,
+        "nombre": "Mattias Skjelmose",
+        "equipo": "Lidl-Trek",
+        "tiempo": "+0:38"
+      },
+      {
+        "pos": 7,
+        "nombre": "Jonas Vingegaard",
+        "equipo": "Visma-Lease a Bike",
+        "tiempo": "+0:44"
+      },
+      {
+        "pos": 8,
+        "nombre": "Isaac del Toro",
+        "equipo": "UAE Emirates-XRG",
+        "tiempo": "+1:31"
       }
     ]
   }
