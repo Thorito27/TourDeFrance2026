@@ -1,7 +1,7 @@
 {
   "_INSTRUCCIONES": "Edita este archivo tras cada etapa y haz commit. El visor lo lee al abrirse. NO borres las comillas ni las comas. Fecha de última actualización abajo.",
-  "actualizado": "2026-07-15",
-  "ultima_etapa": 10,
+  "actualizado": "2026-07-16",
+  "ultima_etapa": 11,
   "_ayuda_abandonos": "Lista de corredores que han abandonado. Escribe el nombre EXACTO como aparece en el visor (panel Equipos). Añade una línea por cada uno, separadas por comas.",
   "abandonos": [
     "Torstein Træen",
@@ -76,19 +76,19 @@
       "pos": 1,
       "nombre": "Mads Pedersen",
       "equipo": "Lidl-Trek",
-      "valor": "293 pts"
+      "valor": "317 pts"
     },
     {
       "pos": 2,
       "nombre": "Biniam Girmay",
       "equipo": "NSN Cycling",
-      "valor": "239 pts"
+      "valor": "272 pts"
     },
     {
       "pos": 3,
-      "nombre": "Tim Merlier",
-      "equipo": "Soudal Quick-Step",
-      "valor": "213 pts"
+      "nombre": "Jasper Philipsen",
+      "equipo": "Alpecin-Premier Tech",
+      "valor": "255 pts"
     }
   ],
   "montana": [
@@ -96,19 +96,19 @@
       "pos": 1,
       "nombre": "Tadej Pogačar",
       "equipo": "UAE Emirates-XRG",
-      "valor": "líder"
+      "valor": "42 pts"
     },
     {
       "pos": 2,
       "nombre": "Jonas Vingegaard",
       "equipo": "Visma-Lease a Bike",
-      "valor": "2.º"
+      "valor": "27 pts"
     },
     {
       "pos": 3,
       "nombre": "Richard Carapaz",
       "equipo": "EF Education-EasyPost",
-      "valor": "3.º"
+      "valor": "19 pts"
     }
   ],
   "jovenes": [
@@ -149,7 +149,8 @@
     "7": "Tim Merlier",
     "8": "Tim Merlier",
     "9": "Mathieu van der Poel",
-    "10": "Tadej Pogačar"
+    "10": "Tadej Pogačar",
+    "11": "Søren Wærenskjold"
   },
   "_ayuda_resultados_etapa": "Resultado (top) de CADA etapa ya disputada, con tiempos. Clave = número de etapa (texto). Cada corredor: {\"pos\":1,\"nombre\":\"...\",\"equipo\":\"...\",\"tiempo\":\"...\"}. El 1º lleva el tiempo total (ej '4:12:33') y el resto la diferencia (ej '+0:14', o 'm.t.' si es el mismo tiempo). Deja {} mientras no haya nada; añade una etapa cuando se dispute. La clasificación GENERAL (que cambia cada día) va arriba en 'general'.",
   "resultados_etapa": {
@@ -603,6 +604,68 @@
         "nombre": "Isaac del Toro",
         "equipo": "UAE Emirates-XRG",
         "tiempo": "+1:31"
+      }
+    ],
+    "11": [
+      {
+        "pos": 1,
+        "nombre": "Søren Wærenskjold",
+        "equipo": "Uno-X Mobility",
+        "tiempo": "3:10:06"
+      },
+      {
+        "pos": 2,
+        "nombre": "Olav Kooij",
+        "equipo": "Decathlon-CMA CGM",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 3,
+        "nombre": "Jasper Philipsen",
+        "equipo": "Alpecin-Premier Tech",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 4,
+        "nombre": "Milan Fretin",
+        "equipo": "Cofidis",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 5,
+        "nombre": "Huub Artz",
+        "equipo": "Intermarché-Lotto",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 6,
+        "nombre": "Biniam Girmay",
+        "equipo": "NSN Cycling",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 7,
+        "nombre": "Anthony Turgis",
+        "equipo": "TotalEnergies",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 8,
+        "nombre": "Clément Russo",
+        "equipo": "Groupama-FDJ United",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 9,
+        "nombre": "Fernando Gaviria",
+        "equipo": "Caja Rural-Seguros RGA",
+        "tiempo": "m.t."
+      },
+      {
+        "pos": 10,
+        "nombre": "Pascal Ackermann",
+        "equipo": "Jayco AlUla",
+        "tiempo": "m.t."
       }
     ]
   }
