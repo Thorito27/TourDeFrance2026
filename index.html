@@ -256,8 +256,11 @@
   .rider:hover{background:rgba(255,255,255,.06)}
   .rider .bib{font:700 10px/1 Inter;color:var(--muted);min-width:22px;text-align:right;flex:0 0 auto;font-variant-numeric:tabular-nums;opacity:.75}
   .rider .nat{font:600 9px/1 Inter;color:var(--muted);min-width:26px}
-  .rider.dnf{opacity:.45}
-  .rider.dnf .rn{text-decoration:line-through}
+  .rider.dnf{opacity:.5}
+  .rider.dnf .rn{text-decoration:line-through;text-decoration-color:#e4032e;text-decoration-thickness:2px}
+  .rider.dnf .bib,.rider.dnf .nat{text-decoration:line-through;text-decoration-color:#e4032e}
+  .rider .abflag{display:none}
+  .rider.dnf .abflag{display:inline-block;margin-left:auto;font:800 8px/1 Inter;letter-spacing:.04em;color:#fff;background:#c8102e;padding:2px 5px;border-radius:4px;flex:0 0 auto;text-decoration:none}
   .teamsfoot{margin-top:8px;font:500 10px/1.4 Inter;color:var(--muted)}
   .teamsfoot button{margin-top:5px;background:none;border:1px solid var(--panel-line);color:#eef2f7;border-radius:7px;padding:4px 9px;font:600 10px Inter;cursor:pointer}
   .keyhint{position:absolute;right:14px;bottom:150px;z-index:5;font:500 10px/1 Inter;color:var(--muted);
@@ -1367,7 +1370,7 @@ function buildTeamsPanel(){
       const jer=maillotOf(nm);
       html+='<div class="rider'+dnf+'" data-n="'+nm.replace(/"/g,'&quot;')+'" title="Toca para marcar/quitar abandono (local)">'+
         (r[2]!=null?'<span class="bib">'+r[2]+'</span>':'')+
-        '<span class="nat">'+r[1]+'</span><span class="rn">'+nm+'</span>'+(jer?'<span class="jbadge '+jer+'"></span>':'')+'</div>';
+        '<span class="nat">'+r[1]+'</span><span class="rn">'+nm+'</span>'+(jer?'<span class="jbadge '+jer+'"></span>':'')+(dnf?'<span class="abflag">ABANDONÓ</span>':'')+'</div>';
     });
     html+='</div></div>';
   });
